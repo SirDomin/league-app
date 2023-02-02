@@ -48,7 +48,7 @@ class Game
     /**
      * @return mixed
      */
-    public function getInfo()
+    public function getInfo(): Info
     {
         return $this->info;
     }

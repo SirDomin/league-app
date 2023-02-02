@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use DateTime;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -74,7 +75,7 @@ class Info
     private $mapId;
 
     /**
-     * @ORM\OneToMany(targetEntity="Participant", mappedBy="gameMetadata", cascade={"persist"})
+     * @ORM\OneToMany(targetEntity="Participant", mappedBy="info", cascade={"persist"})
      */
     private $participants;
 
@@ -234,6 +235,11 @@ class Info
         return $this->gameStartTimestamp;
     }
 
+    public function getFormattedStartDate(): string
+    {
+        return date('Y-m-d H:i:s', $this->getGameStartTimestamp() / 1000);
+    }
+
     /**
      * @param mixed $gameStartTimestamp
      */
@@ -373,5 +379,6 @@ class Info
     public function addParticipants(Participant $participant): void
     {
         $this->participants[] = $participant;
+        $participant->setInfo($this);
     }
 }
