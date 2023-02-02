@@ -3,7 +3,6 @@
 namespace App\Transformer;
 
 use App\Entity\Info;
-use App\Entity\Participant;
 
 class InfoTransformer
 {

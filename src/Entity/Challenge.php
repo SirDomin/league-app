@@ -96,82 +96,82 @@ class Challenge
     /**
      * @ORM\Column(type="integer")
      */
-    private $dodgeSkillShotsSmallWindow;
+    private $dodgeSkillShotsSmallWindow = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $doubleAces;
+    private $doubleAces = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $dragonTakedowns;
+    private $dragonTakedowns = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $earlyLaningPhaseGoldExpAdvantage;
+    private $earlyLaningPhaseGoldExpAdvantage = 0;
 
     /**
      * @ORM\Column(type="float")
      */
-    private $effectiveHealAndShielding;
+    private $effectiveHealAndShielding = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $elderDragonKillsWithOpposingSoul;
+    private $elderDragonKillsWithOpposingSoul = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $elderDragonMultikills;
+    private $elderDragonMultikills = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $enemyChampionImmobilizations;
+    private $enemyChampionImmobilizations = 0;
 
     /**
      * @ORM\Column(type="float")
      */
-    private $enemyJungleMonsterKills;
+    private $enemyJungleMonsterKills = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $epicMonsterKillsNearEnemyJungler;
+    private $epicMonsterKillsNearEnemyJungler = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $epicMonsterKillsWithin30SecondOfSpawn;
+    private $epicMonsterKillsWithin30SecondOfSpawn = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $epicMonsterSteals;
+    private $epicMonsterSteals = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $epicMonsterStolenWithoutSmite;
+    private $epicMonsterStolenWithoutSmite = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $flawlessAces;
+    private $flawlessAces = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $fullTeamTakedown;
+    private $fullTeamTakedown = 0;
 
     /**
      * @ORM\Column(type="float")
      */
-    private $gameLength;
+    private $gameLength = 0;
 
     /**
      * @ORM\Column(type="integer")
@@ -511,94 +511,94 @@ class Challenge
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $teamBaronKills;
+    private $teamBaronKills = 0;
 
     /**
      * @ORM\Column(type="float")
      */
-    private $teamDamagePercentage;
+    private $teamDamagePercentage = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $teamElderDragonKills;
+    private $teamElderDragonKills = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $teamRiftHeraldKills;
+    private $teamRiftHeraldKills = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $threeWardsOneSweeperCount;
+    private $threeWardsOneSweeperCount = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $tookLargeDamageSurvived;
+    private $tookLargeDamageSurvived = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $turretPlatesTaken;
+    private $turretPlatesTaken = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $turretTakedowns;
+    private $turretTakedowns = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $turretsTakenWithRiftHerald;
+    private $turretsTakenWithRiftHerald = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $twentyMinionsIn3SecondsCount;
+    private $twentyMinionsIn3SecondsCount = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $unseenRecalls;
+    private $unseenRecalls = 0;
 
     /**
      * @ORM\Column(type="float")
      */
-    private $visionScoreAdvantageLaneOpponent;
+    private $visionScoreAdvantageLaneOpponent = 0;
 
     /**
      * @ORM\Column(type="float")
      */
-    private $visionScorePerMinute;
+    private $visionScorePerMinute = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $wardTakedowns;
+    private $wardTakedowns = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $wardTakedownsBefore20M;
+    private $wardTakedownsBefore20M = 0;
 
     /**
      * @var int
      * @ORM\Column(type="integer")
      */
-    private $wardsGuarded;
+    private $wardsGuarded = 0;
 
     /**
      * @return mixed
@@ -1227,7 +1227,7 @@ class Challenge
     /**
      * @return int
      */
-    public function getJungleCsBefore10Minutes(): int
+    public function getJungleCsBefore10Minutes(): float
     {
         return $this->jungleCsBefore10Minutes;
     }
@@ -1235,7 +1235,7 @@ class Challenge
     /**
      * @param int $jungleCsBefore10Minutes
      */
-    public function setJungleCsBefore10Minutes(int $jungleCsBefore10Minutes): void
+    public function setJungleCsBefore10Minutes(float $jungleCsBefore10Minutes): void
     {
         $this->jungleCsBefore10Minutes = $jungleCsBefore10Minutes;
     }

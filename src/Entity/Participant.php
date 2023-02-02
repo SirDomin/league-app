@@ -19,7 +19,7 @@ class Participant
     private $id;
 
     /**
-     * @ORM\OneToMany (targetEntity="Info",mappedBy="participants", cascade={"persist"})
+     * @ORM\ManyToOne(targetEntity="Info", cascade={"persist"})
      * @ORM\JoinColumn(name="info_id", referencedColumnName="id")
      */
     private $info;
@@ -32,37 +32,37 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $allInPings;
+    private $allInPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $assistMePings;
+    private $assistMePings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $baitPings;
+    private $baitPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $basicPings;
+    private $basicPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $assists;
+    private $assists = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $baronKills;
+    private $baronKills = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $bountyLevel;
+    private $bountyLevel = 0;
 
     /**
      * @ORM\OneToOne(targetEntity="Challenge", cascade={"persist"})
@@ -72,122 +72,122 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $champExperience;
+    private $champExperience = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $champLevel;
+    private $champLevel = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $championId;
+    private $championId = 0;
 
     /**
      * @ORM\Column(type="string")
      */
-    private $championName;
+    private $championName = '';
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $championTransform;
+    private $championTransform = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $commandPings;
+    private $commandPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $consumablesPurchased;
+    private $consumablesPurchased = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $damageDealtToBuildings;
+    private $damageDealtToBuildings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $damageDealtToObjectives;
+    private $damageDealtToObjectives = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $damageDealtToTurrets;
+    private $damageDealtToTurrets = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $damageSelfMitigated;
+    private $damageSelfMitigated = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $dangerPings;
+    private $dangerPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $deaths;
+    private $deaths = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $detectorWardsPlaced;
+    private $detectorWardsPlaced = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $doubleKills;
+    private $doubleKills = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $dragonKills;
+    private $dragonKills = 0;
 
     /**
      * @ORM\Column(type="boolean")
      */
-    private $eligibleForProgression;
+    private $eligibleForProgression = false;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $enemyMissingPings;
+    private $enemyMissingPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $enemyVisionPings;
+    private $enemyVisionPings = 0;
 
     /**
      * @ORM\Column(type="boolean")
      */
-    private $firstBloodAssist;
+    private $firstBloodAssist = false;
 
     /**
      * @ORM\Column(type="boolean")
      */
-    private $firstBloodKill;
+    private $firstBloodKill = 0;
 
     /**
      * @ORM\Column(type="boolean")
      */
-    private $firstTowerAssist;
+    private $firstTowerAssist = 0;
 
     /**
      * @ORM\Column(type="boolean")
      */
-    private $firstTowerKill;
+    private $firstTowerKill = false;
 
     /**
      * @ORM\Column(type="boolean")
      */
-    private $gameEndedInEarlySurrender;
+    private $gameEndedInEarlySurrender  = false;
 
     /**
      * @ORM\Column(type="boolean")
@@ -197,47 +197,47 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $getBackPings;
+    private $getBackPings = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $goldEarned;
+    private $goldEarned = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $goldSpent;
+    private $goldSpent = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $holdPings;
+    private $holdPings = 0;
 
     /**
      * @ORM\Column(type="string")
      */
-    private $individualPosition;
+    private $individualPosition = '';
 
     /**
      * @ORM\Column(type="string")
      */
-    private $teamPosition;
+    private $teamPosition = '';
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $inhibitorKills;
+    private $inhibitorKills = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $inhibitorTakedowns;
+    private $inhibitorTakedowns = 0;
 
     /**
      * @ORM\Column(type="integer")
      */
-    private $inhibitorsLost;
+    private $inhibitorsLost = 0;
 
     /**
      * @ORM\Column(type="integer")
@@ -332,7 +332,7 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $needVisionPings;
+    private $needVisionPings = 0;
 
     /**
      * @ORM\Column(type="integer")
@@ -367,7 +367,7 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $onMyWayPings;
+    private $onMyWayPings = 0;
 
     /**
      * @ORM\Column(type="integer")
@@ -380,7 +380,7 @@ class Participant
     private $pentaKills;
 
     /**
-     * @ORM\OneToOne(targetEntity="App\Entity\Perk", mappedBy="participant", cascade={"persist"})
+     * @ORM\Column(type="json", nullable=true)
      */
     private $perks;
 
@@ -407,7 +407,7 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $pushPings;
+    private $pushPings = 0;
 
     /**
      * @ORM\Column(type="string", length=255)
@@ -607,7 +607,7 @@ class Participant
     /**
      * @ORM\Column(type="integer")
      */
-    private $visionClearedPings;
+    private $visionClearedPings = 0;
 
     /**
      * @ORM\Column(type="integer")
@@ -715,17 +715,17 @@ class Participant
     }
 
     /**
-     * @return mixed
+     * @return bool
      */
-    public function getEligibleForProgression()
+    public function getEligibleForProgression(): bool
     {
         return $this->eligibleForProgression;
     }
 
     /**
-     * @param mixed $eligibleForProgression
+     * @param bool $eligibleForProgression
      */
-    public function setEligibleForProgression($eligibleForProgression): void
+    public function setEligibleForProgression(bool $eligibleForProgression): void
     {
         $this->eligibleForProgression = $eligibleForProgression;
     }
@@ -1231,7 +1231,7 @@ class Participant
     /**
      * @return mixed
      */
-    public function getFirstTowerKill()
+    public function getFirstTowerKill(): bool
     {
         return $this->firstTowerKill;
     }
@@ -1241,7 +1241,7 @@ class Participant
      */
     public function setFirstTowerKill($firstTowerKill): void
     {
-        $this->firstTowerKill = $firstTowerKill;
+        $this->firstTowerKill = !($firstTowerKill === false);
     }
 
     /**
@@ -1817,21 +1817,22 @@ class Participant
      */
     public function setPerks($perks): void
     {
-        $perkObject = new Perk();
+//        $perkObject = new Perk();
+//        $perkObject->setParticipant($this);
+//
+//        foreach ($perks['styles'] as $perkStyles) {
+//            $perkStyle = new PerkStyle();
+//            $perkStyle->setDescription($perkStyles['description']);
+//            $perkStyle->setStyle($perkStyles['style']);
+//            foreach ($perkStyles['selections'] as $selection) {
+//                $perkStyle->addSelection(new PerkStyleSelection($selection));
+//            }
+//            $perkObject->addStyle($perkStyle);
+//
+//        }
+//        $perkObject->setStatPerks(new PerkStats($perks['statPerks']));
 
-        foreach ($perks['styles'] as $perkStyles) {
-            $perkStyle = new PerkStyle();
-            $perkStyle->setDescription($perkStyles['description']);
-            $perkStyle->setStyle($perkStyles['style']);
-            foreach ($perkStyles['selections'] as $selection) {
-                $perkStyle->addSelection(new PerkStyleSelection($selection));
-            }
-            $perkObject->addStyle($perkStyle);
-
-        }
-        $perkObject->setStatPerks(new PerkStats($perks['statPerks']));
-
-        $this->perks = $perkObject;
+        $this->perks = $perks;
     }
 
     /**
@@ -2599,7 +2600,7 @@ class Participant
      */
     public function setWin($win): void
     {
-        $this->win = $win;
+        $this->win = !($win === false);
     }
 
     /**
