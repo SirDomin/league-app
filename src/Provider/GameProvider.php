@@ -6,15 +6,50 @@ use App\ApiManager\LeagueApi;
 use App\Entity\Game;
 use App\Entity\Metadata;
 use App\Repository\GameRepository;
+use App\Repository\ParticipantRepository;
 use App\Transformer\InfoTransformer;
 
 class GameProvider
 {
     public function __construct(
         private readonly GameRepository $gameRepository,
-        private readonly LeagueApi $leagueApi
+        private readonly LeagueApi $leagueApi,
+        private readonly ParticipantRepository $participantRepository,
     )
     {
+    }
+
+    private function parseGame(?array $gameData): Game
+    {
+        $metadata = new Metadata();
+        $metadata->setMatchId($gameData['metadata']['matchId']);
+        $metadata->setDataVersion($gameData['metadata']['dataVersion']);
+        $metadata->setParticipants($gameData['metadata']['participants']);
+        $info = InfoTransformer::getInfo($gameData['info']);
+
+        $game = new Game();
+        $game->setInfo($info);
+        $game->setMetadata($metadata);
+
+        return $game;
+    }
+
+    public function connectParticipants($data): array
+    {
+        $participants = [];
+
+        foreach ($data['participants'] as $participant) {
+            $participants[] = [
+                'games_played' => $this->gameRepository->countAllGamesWithPlayerBySummonerId($participant['summonerId']),
+                'summoner_id' => $participant['summonerId'],
+                'summoner_name' => $participant['summonerName'],
+                'team_id' => $participant['teamId'],
+                'champion_id' => $participant['championId'],
+                'url_opgg' => 'https://www.op.gg/summoners/eune/' . $participant['summonerName'],
+            ];
+        }
+
+        return $participants;
     }
 
     public function provideGameByMatchId(string $matchId): ?Game
@@ -25,18 +60,21 @@ class GameProvider
             return $game;
         }
 
-        $game = $this->leagueApi->getGameById($matchId);
+        return $this->parseGame($this->leagueApi->getGameById($matchId));
+    }
 
-        $metadata = new Metadata();
-        $metadata->setMatchId($game['metadata']['matchId']);
-        $metadata->setDataVersion($game['metadata']['dataVersion']);
-        $metadata->setParticipants($game['metadata']['participants']);
-        $info = InfoTransformer::getInfo($game['info']);
+    public function getLastGame(): ?Game
+    {
+    }
 
-        $game = new Game();
-        $game->setInfo($info);
-        $game->setMetadata($metadata);
+    public function provideActiveGameForUser(string $summonerName): ?array
+    {
+        $gameData = $this->leagueApi->getCurrentGame($summonerName);
 
-        return $game;
+        if ($gameData === null) {
+            return null;
+        }
+
+        return $this->connectParticipants($gameData);
     }
 }

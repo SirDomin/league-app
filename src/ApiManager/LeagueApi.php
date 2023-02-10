@@ -69,7 +69,7 @@ class LeagueApi
 
         $response = $this->getRequest($url);
 
-        if ($response['status']['status_code'] === 404) {
+        if (isset($response['status']) && $response['status']['status_code'] === 404) {
             return null;
         }
 
