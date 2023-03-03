@@ -43,6 +43,13 @@ class LeagueApi
         return $this->getRequest($url);
     }
 
+    public function getSummonerLeagues(string $summonerId): array
+    {
+        $url = \sprintf('https://eun1.api.riotgames.com/lol/league/v4/entries/by-summoner/%s', $summonerId);
+
+        return $this->getRequest($url);
+    }
+
     public function getGameById(string $matchId): array
     {
         $url = 'https://europe.api.riotgames.com/lol/match/v5/matches/' . $matchId;

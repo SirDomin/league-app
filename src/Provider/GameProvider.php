@@ -39,6 +39,16 @@ class GameProvider
         $participants = [];
 
         foreach ($data['participants'] as $participant) {
+            $division = $this->leagueApi->getSummonerLeagues($participant['summonerId']);
+
+            $ranking = [];
+
+            foreach ($division as $div) {
+                $ranking[] = [
+                    $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'], $div['rank'], $div['leaguePoints'])
+                ];
+            }
+
             $participants[] = [
                 'games_played' => $this->gameRepository->countAllGamesWithPlayerBySummonerId($participant['summonerId']),
                 'summoner_id' => $participant['summonerId'],
@@ -46,6 +56,7 @@ class GameProvider
                 'team_id' => $participant['teamId'],
                 'champion_id' => $participant['championId'],
                 'url_opgg' => 'https://www.op.gg/summoners/eune/' . $participant['summonerName'],
+                'division' => $ranking,
             ];
         }
 
