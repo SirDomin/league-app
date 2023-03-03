@@ -20,8 +20,6 @@ class SummonerController extends AbstractController
     public function __construct(
         private readonly GameRepository $gameRepository,
         private readonly SummonerDataProvider $summonerDataProvider,
-        private readonly ParticipantRepository $participantRepository,
-        private readonly EntityManagerInterface $entityManager,
         private readonly GameProvider $gameProvider,
     ){ }
 
@@ -66,23 +64,5 @@ class SummonerController extends AbstractController
         $summonerUuid = $this->summonerDataProvider->getPuuidByName($summonerName);
 
         return new Response($serializer->serialize(['games' => $this->gameRepository->countAllGamesWithPlayer($summonerUuid)], 'json'));
-    }
-
-    #[Route('/game/save-result', name: 'summoner-update', methods: ['POST'])]
-    public function edit(Request $request): Response
-    {
-        $content = json_decode($request->getContent(), true);
-
-        foreach ($content as $data) {
-            /** @var Participant $summoner */
-            $summoner = $this->participantRepository->findOneBy(['id' => (int) $data['id']]);
-
-            $summoner->setComment($data['comment']);
-            $this->entityManager->persist($summoner);
-        }
-
-        $this->entityManager->flush();
-
-        return new Response();
     }
 }
