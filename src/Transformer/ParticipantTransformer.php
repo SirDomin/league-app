@@ -11,7 +11,11 @@ class ParticipantTransformer
         $participant = new Participant();
 
         foreach ($data as $key => $participantData) {
-            $participant->{'set'.$key}($participantData);
+            if (method_exists($participant, 'set'.$key)) {
+                $participant->{'set'.$key}($participantData);
+
+            }
+
         }
 
         return $participant;

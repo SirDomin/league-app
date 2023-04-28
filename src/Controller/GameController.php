@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\ApiManager\LeagueApi;
+use App\DataScrapper\PorofessorScrapper;
 use App\Entity\Participant;
 use App\Provider\GameProvider;
 use App\Provider\SummonerDataProvider;
@@ -24,16 +25,17 @@ class GameController extends AbstractController
         private readonly GameRepository $gameRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ParticipantRepository $participantRepository,
+        private readonly PorofessorScrapper $porofessorScrapper
     ) { }
 
-    #[Route('/game', name: 'game')]
-    public function index(): Response
+    #[Route('/game/active-data/{summonerName}', name: 'game')]
+    public function index(string $summonerName): Response
     {
-        $matchId = 'EUN1_3306952394';
+        $serializer = SerializerBuilder::create()->build();
 
-        $game = $this->gameProvider->provideGameByMatchId($matchId);
+        $data = $this->porofessorScrapper->getActiveData($summonerName);
 
-        return new JsonResponse(['created' => $game]);
+        return new Response($serializer->serialize(['data' => $data], 'json'));
     }
 
     #[Route('/game/by-puuid/{puuid}', name: 'game-show', methods: ['GET'])]
