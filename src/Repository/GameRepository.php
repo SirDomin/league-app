@@ -4,7 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Game;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\ORM\Tools\Pagination\Paginator;
+use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\Persistence\ManagerRegistry;
 
 class GameRepository extends ServiceEntityRepository
@@ -31,7 +31,55 @@ class GameRepository extends ServiceEntityRepository
             ->setParameter('matchId', $matchId)
         ;
 
-        return $result->getQuery()->getOneOrNullResult();
+        try {
+            return $result->getQuery()->getOneOrNullResult();
+
+        } catch (NonUniqueResultException) {
+            dd($matchId);
+        }
+    }
+
+    public function paginateHistory(int $timestamp, int $limit): array
+    {
+        $result = $this
+            ->createQueryBuilder('g')
+            ->addSelect('g.id')
+            ->addSelect('i')
+            ->leftJoin('g.info', 'i')
+            ->where('i.gameStartTimestamp < :timestamp')
+            ->setParameter('timestamp', $timestamp)
+            ->addOrderBy('i.gameStartTimestamp', 'DESC')
+            ->setMaxResults($limit)
+        ;
+
+        $ids = [];
+        $res = $result->getQuery()->getResult();
+
+        foreach ($res as $game) {
+            $ids[] = $game['id'];
+        }
+
+        return $this->getGames($ids);
+    }
+
+    private function getGames(array $gameIds): array {
+        $result = $this
+            ->createQueryBuilder('g')
+            ->addSelect('g')
+            ->addSelect('m')
+            ->addSelect('i')
+            ->addSelect('participant')
+            ->addSelect('challenge')
+            ->leftJoin('g.metadata', 'm')
+            ->leftJoin('g.info', 'i')
+            ->leftJoin('i.participants', 'participant')
+            ->leftJoin('participant.challenge', 'challenge')
+            ->where('g.id IN (:ids)')
+            ->addOrderBy('i.gameStartTimestamp', 'DESC')
+            ->setParameter(':ids', $gameIds)
+        ;
+
+        return $result->getQuery()->getResult();
     }
 
     public function getAllGamesWithPlayer(string $puuid): array
@@ -68,6 +116,7 @@ class GameRepository extends ServiceEntityRepository
             ->where('participant.summonerId = :summonerId')
             ->setParameter('summonerId', $summonerId)
             ->orderBy('i.gameCreation', 'DESC')
+            ->setMaxResults(1000)
         ;
 
         return $query->getQuery()->getArrayResult();

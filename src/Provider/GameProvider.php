@@ -45,7 +45,7 @@ class GameProvider
 
             foreach ($division as $div) {
                 $ranking[] = [
-                    $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'], $div['rank'], $div['leaguePoints'])
+                    $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'] ?? '', $div['rank'] ?? '', $div['leaguePoints'] ?? '')
                 ];
             }
 
@@ -72,6 +72,44 @@ class GameProvider
         }
 
         return $this->parseGame($this->leagueApi->getGameById($matchId));
+    }
+
+    public function getHistory(string $summonerName, int $limit = 0, int $start = 0, int $lastTimestamp = 0): ?array
+    {
+        $lastGames = $this->leagueApi->getGamesHistory($summonerName, $limit, $start);
+
+        $gamesResult = [];
+
+        foreach ($lastGames as $gameId) {
+            $game = $this->gameRepository->findByMatchId($gameId);
+
+            if (!$game) {
+                $gamesResult[] = [
+                    'gameId' => $gameId,
+                ];
+            } else {
+                $gamesResult[] = $game;
+            }
+        }
+
+        if (count($gamesResult) < 50) {
+            if ($gamesResult !== []) {
+                /** @var Game $lastGame */
+                $lastGame = end($gamesResult);
+
+                $lastTimestamp = $lastGame->getInfo()->getGameStartTimestamp();
+            }
+
+            $games = $this->gameRepository->paginateHistory($lastTimestamp, $limit - count($gamesResult));
+
+            foreach ($games as $game) {
+                $gamesResult[] = $game;
+            }
+        }
+
+
+
+        return $gamesResult;
     }
 
     public function getLastGame(): ?Game

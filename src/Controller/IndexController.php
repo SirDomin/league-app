@@ -2,22 +2,43 @@
 
 namespace App\Controller;
 
+use App\ApiManager\LeagueApi;
+use JMS\Serializer\SerializerBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 class IndexController extends AbstractController
 {
-    #[Route('/index', name: 'index')]
+    public function __construct(
+        private readonly LeagueApi $leagueApi,
+    )
+    {
+    }
+
+    #[Route('/status', name: 'status')]
     public function index(): JsonResponse
     {
-        $output=null;
-        $retval=null;
-        exec('wmic process | find "LeagueClientUx.exe"', $output, $retval);
+       return new JsonResponse(['status' => 'OK']);
+    }
 
-        dd($output);
+
+    #[Route('/login', name: 'login', methods: ['POST'])]
+    public function login(Request $request): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        $content = json_decode($request->getContent(), true);
+
+        $summonerData = $this->leagueApi->getSummonerData($content['login']);
+
+        return new Response($serializer->serialize(
+            [
+                'result' => $summonerData['puuid']
+            ],
+            'json')
+        );
     }
 }
-//curl -k -X GET -H "Content-Type: application/json" -H "Authorization: Basic trlq-ijV4GtEFvTpn83qqA" "https://127.0.0.1:63451/chat/v5/participants/champ-select"
-//curl -X GET -H "Content-Type: application/json" -H "Authorization: Basic FcuztF5isP7JJxDZ29P7oA" "https://127.0.0.1:63533/chat/v5/participants/champ-select"
-//1427734738000

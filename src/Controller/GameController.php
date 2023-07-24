@@ -58,6 +58,37 @@ class GameController extends AbstractController
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
 
+    #[Route('/game/history/{summonerName}/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['GET'])]
+    public function getHistoryForUser(string $summonerName, int $limit, int $start, int $lastTimestamp): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        $games = $this->gameProvider->getHistory($summonerName, $limit, $start, $lastTimestamp);
+
+        return new Response($serializer->serialize(['games' => $games], 'json'));
+    }
+
+    #[Route('/game/save/{matchId}', name: 'game-save-match-id', methods: ['GET'])]
+    public function saveGameByMatchId(string $matchId): Response
+    {
+        $game = $this->gameRepository->findByMatchId($matchId);
+
+        if ($game == null) {
+            $game = $this->gameProvider->provideGameByMatchId($matchId);
+            $this->entityManager->persist($game);
+            $this->entityManager->flush();
+        }
+
+        $serializer = SerializerBuilder::create()->build();
+
+        return new Response($serializer->serialize(
+            [
+                'game' => $game
+            ],
+            'json')
+        );
+    }
+
     #[Route('/game/save', name: 'game-save', methods: ['GET'])]
     public function saveGame(): Response
     {
