@@ -32,13 +32,26 @@ class IndexController extends AbstractController
 
         $content = json_decode($request->getContent(), true);
 
-        $summonerData = $this->leagueApi->getSummonerData($content['login']);
+        $summonerData = $this->leagueApi->getSummonerData($content['displayName']);
 
-        return new Response($serializer->serialize(
-            [
-                'result' => $summonerData['puuid']
-            ],
-            'json')
-        );
+        $authorization = [
+            'puuid' => null,
+            'token' => null,
+        ];
+
+        if ($summonerData) {
+            if (
+                $summonerData['name'] === $content['displayName'] &&
+                $summonerData['profileIconId'] === $content['profileIconId'] &&
+                $summonerData['summonerLevel'] === $content['summonerLevel']
+            ) {
+                $authorization = [
+                    'puuid' => $summonerData['puuid'],
+                    'token' => md5($summonerData['puuid'] . $summonerData['id'] . $summonerData['puuid']),
+                ];
+            }
+        }
+
+        return new Response($serializer->serialize($authorization, 'json'));
     }
 }

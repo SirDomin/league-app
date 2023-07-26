@@ -43,6 +43,20 @@ class LeagueApi
         return $this->getRequest($url);
     }
 
+    public function getSummonerDataByPuuid(string $puuid): array
+    {
+        $url = 'https://eun1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
+
+        return $this->getRequest($url);
+    }
+
+    public function getAccountData(string $puuid): array
+    {
+        $url = 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/' . $puuid;
+
+        return $this->getRequest($url);
+    }
+
     public function getSummonerLeagues(string $summonerId): array
     {
         $url = \sprintf('https://eun1.api.riotgames.com/lol/league/v4/entries/by-summoner/%s', $summonerId);
