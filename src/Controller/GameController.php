@@ -28,12 +28,14 @@ class GameController extends AbstractController
         private readonly PorofessorScrapper $porofessorScrapper
     ) { }
 
-    #[Route('/game/active-data/{puuid}', name: 'game')]
-    public function index(string $puuid): Response
+    #[Route('/game/active-data', name: 'game')]
+    public function index(Request $request): Response
     {
+        $data = $request->getSession()->get('data');
+
         $serializer = SerializerBuilder::create()->build();
 
-        $summonerData = $this->leagueApi->getSummonerDataByPuuid($puuid);
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
         $data = $this->porofessorScrapper->getActiveData($summonerData['name']);
 
@@ -50,24 +52,28 @@ class GameController extends AbstractController
         return new Response($serializer->serialize($game, 'json'));
     }
 
-    #[Route('/game/active/{puuid}', name: 'game-find-active', methods: ['GET'])]
-    public function findActive(string $puuid): Response
+    #[Route('/game/active', name: 'game-find-active', methods: ['GET'])]
+    public function findActive(Request $request): Response
     {
+        $data = $request->getSession()->get('data');
+
         $serializer = SerializerBuilder::create()->build();
 
-        $summonerData = $this->leagueApi->getSummonerDataByPuuid($puuid);
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
         $game = $this->gameProvider->provideActiveGameForUser($summonerData['name']);
 
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
 
-    #[Route('/game/history/{puuid}/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['GET'])]
-    public function getHistoryForUser(string $puuid, int $limit, int $start, int $lastTimestamp): Response
+    #[Route('/game/history/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['GET'])]
+    public function getHistoryForUser(int $limit, int $start, int $lastTimestamp, Request $request): Response
     {
+        $data = $request->getSession()->get('data');
+
         $serializer = SerializerBuilder::create()->build();
 
-        $summonerData = $this->leagueApi->getSummonerDataByPuuid($puuid);
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
         $games = $this->gameProvider->getHistory($summonerData['name'], $limit, $start, $lastTimestamp);
 
@@ -95,10 +101,28 @@ class GameController extends AbstractController
         );
     }
 
-    #[Route('/game/save', name: 'game-save', methods: ['GET'])]
-    public function saveGame(): Response
+    #[Route('/game/{matchId}/timeline', name: 'game-game-timeline', methods: ['GET'])]
+    public function getGameTimeline(string $matchId): Response
     {
-        $gameIds = $this->leagueApi->getGamesHistory('SirDomin', 1, 0);
+        $timeline = $this->leagueApi->getTimelineForMatchId($matchId);
+
+        $serializer = SerializerBuilder::create()->build();
+
+        return new Response($serializer->serialize(
+            [
+                'game' => $timeline
+            ],
+            'json')
+        );
+    }
+
+    #[Route('/game/save', name: 'game-save', methods: ['GET'])]
+    public function saveGame(Request $request): Response
+    {
+        $data = $request->getSession()->get('data');
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+
+        $gameIds = $this->leagueApi->getGamesHistory($summonerData['name'], 1, 0);
 
         $game = $this->gameProvider->provideGameByMatchId($gameIds[0]);
 

@@ -8,11 +8,39 @@ class LeagueApi
 {
     private string $token;
 
+    private string $secret;
+
+    private string $iv;
+
+    private string $cypherMethod;
+
+    private ?string $serverName;
+
     public function __construct(
         private readonly HttpClientInterface $httpClient
     )
     {
         $this->token = $_ENV['APP_RIOT_TOKEN'];
+        $this->secret = $_ENV['APP_SECRET'];
+        $this->cypherMethod = 'AES-256-CBC';
+        $this->iv = base64_decode($_ENV['APP_IV']);
+
+        $this->serverName = null;
+    }
+
+    public function setServer(string $server) {
+        $this->serverName = $server;
+    }
+
+    public function getServer() {
+        return $this->serverName;
+    }
+    public function decodeKey(string $data) {
+        return json_decode(openssl_decrypt($data, $this->cypherMethod, $this->secret, $options = 0, $this->iv), true);
+    }
+
+    public function encodeKey(array $data): string {
+        return openssl_encrypt(json_encode($data), $this->cypherMethod, $this->secret, $options=0, $this->iv);
     }
 
     private function getRequest(string $url): array
@@ -38,14 +66,21 @@ class LeagueApi
 
     public function getSummonerData(string $summonerName): array
     {
-        $url = 'https://eun1.api.riotgames.com/lol/summoner/v4/summoners/by-name/' . $summonerName;
+        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-name/' . $summonerName;
+
+        return $this->getRequest($url);
+    }
+
+    public function login(string $summonerName, string $serverName): array
+    {
+        $url = 'https://' . $serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-name/' . $summonerName;
 
         return $this->getRequest($url);
     }
 
     public function getSummonerDataByPuuid(string $puuid): array
     {
-        $url = 'https://eun1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
+        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
 
         return $this->getRequest($url);
     }
@@ -59,7 +94,7 @@ class LeagueApi
 
     public function getSummonerLeagues(string $summonerId): array
     {
-        $url = \sprintf('https://eun1.api.riotgames.com/lol/league/v4/entries/by-summoner/%s', $summonerId);
+        $url = \sprintf('https://' . $this->serverName . '.api.riotgames.com/lol/league/v4/entries/by-summoner/%s', $summonerId);
 
         return $this->getRequest($url);
     }
@@ -67,6 +102,13 @@ class LeagueApi
     public function getGameById(string $matchId): array
     {
         $url = 'https://europe.api.riotgames.com/lol/match/v5/matches/' . $matchId;
+
+        return $this->getRequest($url);
+    }
+
+    public function getTimelineForMatchId(string $matchId): array
+    {
+        $url = 'https://europe.api.riotgames.com/lol/match/v5/matches/' . $matchId . '/timeline';
 
         return $this->getRequest($url);
     }
@@ -86,13 +128,15 @@ class LeagueApi
     {
         $summonerData = $this->getSummonerData($summonerName);
 
-        $url = 'https://eun1.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/' . $summonerData['id'];
+        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/' . $summonerData['id'];
 
         $response = $this->getRequest($url);
 
         if (isset($response['status']) && $response['status']['status_code'] === 404) {
             return null;
         }
+
+        $response['summonerData'] = $summonerData;
 
         return $response;
     }

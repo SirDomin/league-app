@@ -1,6 +1,7 @@
 {
     # Debug
     {$CADDY_DEBUG}
+    http_port 8080
 }
 
 {$SERVER_NAME}
@@ -23,10 +24,16 @@ route {
         # Enable the subscription API (double-check that it's what you want)
         subscriptions
         # Extra directives
+        cert_duration 720h
         {$MERCURE_EXTRA_DIRECTIVES}
+        tls self_signed
+        protocol {
+            experimental_http3
+        }
     }
     vulcain
     php_fastcgi unix//var/run/php/php-fpm.sock
     encode zstd gzip
     file_server
 }
+

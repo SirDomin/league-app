@@ -24,6 +24,19 @@ class IndexController extends AbstractController
        return new JsonResponse(['status' => 'OK']);
     }
 
+    #[Route('/test', name: 'test')]
+    public function test(): JsonResponse
+    {
+        $data = ['sad' => 'aaa'];
+
+        $string = 'vxXy6g7aVB982Xmnwbc9nQ==';
+
+        return new JsonResponse([
+            'encoded' => $this->leagueApi->encodeKey($data),
+            'decoded' => $this->leagueApi->decodeKey($string),
+        ]);
+    }
+
 
     #[Route('/login', name: 'login', methods: ['POST'])]
     public function login(Request $request): Response
@@ -32,26 +45,33 @@ class IndexController extends AbstractController
 
         $content = json_decode($request->getContent(), true);
 
-        $summonerData = $this->leagueApi->getSummonerData($content['displayName']);
+        $platformName = strtolower($content['platformData']);
 
-        $authorization = [
-            'puuid' => null,
-            'token' => null,
-        ];
+        $summonerData = $this->leagueApi->login($content['summonerData']['displayName'], $platformName);
+
+        if (isset($summonerData['status'])) {
+            return new Response($serializer->serialize($summonerData, 'json'), Response::HTTP_UNAUTHORIZED);
+        }
 
         if ($summonerData) {
             if (
-                $summonerData['name'] === $content['displayName'] &&
-                $summonerData['profileIconId'] === $content['profileIconId'] &&
-                $summonerData['summonerLevel'] === $content['summonerLevel']
+                $summonerData['name'] === $content['summonerData']['displayName'] &&
+                $summonerData['profileIconId'] === $content['summonerData']['profileIconId'] &&
+                $summonerData['summonerLevel'] === $content['summonerData']['summonerLevel']
             ) {
-                $authorization = [
+                $dataToSave = [
+                    'server' => $platformName,
+                    'summonerName' => $summonerData['name'],
                     'puuid' => $summonerData['puuid'],
-                    'token' => md5($summonerData['puuid'] . $summonerData['id'] . $summonerData['puuid']),
                 ];
+
+                return new Response($serializer->serialize([
+                    'token' => $this->leagueApi->encodeKey($dataToSave),
+                    'puuid' => $summonerData['puuid'],
+                ], 'json'), Response::HTTP_OK);
             }
         }
 
-        return new Response($serializer->serialize($authorization, 'json'));
+        return new Response($serializer->serialize([], 'json'), Response::HTTP_UNAUTHORIZED);
     }
 }

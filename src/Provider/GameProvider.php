@@ -49,6 +49,11 @@ class GameProvider
                 ];
             }
 
+            $participantData = [];
+            if(isset($data['summonerData'])) {
+                $participantData = $data['summonerData'];
+            }
+
             $participants[] = [
                 'games_played' => $this->gameRepository->countAllGamesWithPlayerBySummonerId($participant['summonerId']),
                 'summoner_id' => $participant['summonerId'],
@@ -57,6 +62,8 @@ class GameProvider
                 'champion_id' => $participant['championId'],
                 'url_opgg' => 'https://www.op.gg/summoners/eune/' . $participant['summonerName'],
                 'division' => $ranking,
+                'participant_data' => $participantData,
+                'full_data' => $participant,
             ];
         }
 
@@ -97,7 +104,11 @@ class GameProvider
                 /** @var Game $lastGame */
                 $lastGame = end($gamesResult);
 
+                if (is_array($lastGame)) {
+                    return $gamesResult;
+                }
                 $lastTimestamp = $lastGame->getInfo()->getGameStartTimestamp();
+
             }
 
             $games = $this->gameRepository->paginateHistory($lastTimestamp, $limit - count($gamesResult));
@@ -107,9 +118,34 @@ class GameProvider
             }
         }
 
-
-
         return $gamesResult;
+    }
+
+    public function getGamesWithPlayer(string $summonerName): array
+    {
+        $gamesFound = [];
+
+        $data = $this->leagueApi->getSummonerData('SirDomin');
+
+        for($x = 5; $x < 10; $x++) {
+            echo 'Game '. $x . '-' . $x * 100 . "\n";
+            $games = $this->leagueApi->getGamesHistory($summonerName, 100, $x * 100);
+
+            foreach ($games as $gameId) {
+                $gameInRepo = $this->gameRepository->findByMatchId($gameId);
+
+                if ($gameInRepo === null) {
+                    $gameInfo = $this->leagueApi->getGameById($gameId);
+                    usleep(1500000);
+                    dd($gameInfo);
+                    foreach($gameInfo['metadata']['participants'] as $participantUuid) {
+                        if ($participantUuid === $data['puuid']) {
+                            dd($gameInfo);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public function getLastGame(): ?Game
