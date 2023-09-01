@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\ApiManager\LeagueApi;
+use App\DataScrapper\PorofessorScrapper;
 use App\Entity\Participant;
 use App\Provider\GameProvider;
 use App\Provider\SummonerDataProvider;
@@ -24,16 +25,21 @@ class GameController extends AbstractController
         private readonly GameRepository $gameRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ParticipantRepository $participantRepository,
+        private readonly PorofessorScrapper $porofessorScrapper
     ) { }
 
-    #[Route('/game', name: 'game')]
-    public function index(): Response
+    #[Route('/game/active-data', name: 'game')]
+    public function index(Request $request): Response
     {
-        $matchId = 'EUN1_3306952394';
+        $data = $request->getSession()->get('data');
 
-        $game = $this->gameProvider->provideGameByMatchId($matchId);
+        $serializer = SerializerBuilder::create()->build();
 
-        return new JsonResponse(['created' => $game]);
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+
+        $data = $this->porofessorScrapper->getActiveData($summonerData['name']);
+
+        return new Response($serializer->serialize(['data' => $data], 'json'));
     }
 
     #[Route('/game/by-puuid/{puuid}', name: 'game-show', methods: ['GET'])]
@@ -46,20 +52,77 @@ class GameController extends AbstractController
         return new Response($serializer->serialize($game, 'json'));
     }
 
-    #[Route('/game/active/{summonerName}', name: 'game-find-active', methods: ['GET'])]
-    public function findActive(string $summonerName): Response
+    #[Route('/game/active', name: 'game-find-active', methods: ['GET'])]
+    public function findActive(Request $request): Response
     {
+        $data = $request->getSession()->get('data');
+
         $serializer = SerializerBuilder::create()->build();
 
-        $game = $this->gameProvider->provideActiveGameForUser($summonerName);
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+
+        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name']);
 
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
 
-    #[Route('/game/save', name: 'game-save', methods: ['GET'])]
-    public function saveGame(): Response
+    #[Route('/game/history/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['GET'])]
+    public function getHistoryForUser(int $limit, int $start, int $lastTimestamp, Request $request): Response
     {
-        $gameIds = $this->leagueApi->getGamesHistory('SirDomin', 1, 0);
+        $data = $request->getSession()->get('data');
+
+        $serializer = SerializerBuilder::create()->build();
+
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+
+        $games = $this->gameProvider->getHistory($summonerData['name'], $limit, $start, $lastTimestamp);
+
+        return new Response($serializer->serialize(['games' => $games], 'json'));
+    }
+
+    #[Route('/game/save/{matchId}', name: 'game-save-match-id', methods: ['GET'])]
+    public function saveGameByMatchId(string $matchId): Response
+    {
+        $game = $this->gameRepository->findByMatchId($matchId);
+
+        if ($game == null) {
+            $game = $this->gameProvider->provideGameByMatchId($matchId);
+            $this->entityManager->persist($game);
+            $this->entityManager->flush();
+        }
+
+        $serializer = SerializerBuilder::create()->build();
+
+        return new Response($serializer->serialize(
+            [
+                'game' => $game
+            ],
+            'json')
+        );
+    }
+
+    #[Route('/game/{matchId}/timeline', name: 'game-game-timeline', methods: ['GET'])]
+    public function getGameTimeline(string $matchId): Response
+    {
+        $timeline = $this->leagueApi->getTimelineForMatchId($matchId);
+
+        $serializer = SerializerBuilder::create()->build();
+
+        return new Response($serializer->serialize(
+            [
+                'game' => $timeline
+            ],
+            'json')
+        );
+    }
+
+    #[Route('/game/save', name: 'game-save', methods: ['GET'])]
+    public function saveGame(Request $request): Response
+    {
+        $data = $request->getSession()->get('data');
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+
+        $gameIds = $this->leagueApi->getGamesHistory($summonerData['name'], 1, 0);
 
         $game = $this->gameProvider->provideGameByMatchId($gameIds[0]);
 

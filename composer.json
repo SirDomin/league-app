@@ -16,6 +16,8 @@
         "jms/serializer-bundle": "^5.2",
         "nelmio/cors-bundle": "^2.2",
         "symfony/console": "6.2.*",
+        "symfony/css-selector": "6.2.*",
+        "symfony/dom-crawler": "6.2.*",
         "symfony/dotenv": "6.2.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "6.2.*",
@@ -23,7 +25,8 @@
         "symfony/property-access": "6.2.*",
         "symfony/runtime": "6.2.*",
         "symfony/serializer": "6.2.*",
-        "symfony/yaml": "6.2.*"
+        "symfony/yaml": "6.2.*",
+        "ext-curl": "*"
     },
     "config": {
         "allow-plugins": {
