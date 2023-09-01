@@ -34,18 +34,18 @@ services:
       SERVER_NAME: ${SERVER_NAME:-localhost, caddy:85}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      CADDY_EXTRA_CONFIG: "tls /etc/caddy/certs/tls.pem /etc/caddy/certs/tls.key"
     restart: unless-stopped
     volumes:
       - php_socket:/var/run/php
       - caddy_data:/data
       - caddy_config:/config
+      - ./docker/caddy/certs:/etc/caddy/certs:ro
+      - ./public:/srv/app/public:ro
     ports:
       # HTTP
       - target: 85
         published: 85
-        protocol: tcp
-      - target: 8080
-        published: 8080
         protocol: tcp
       # HTTPS
       - target: 443

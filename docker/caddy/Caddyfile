@@ -1,7 +1,6 @@
 {
     # Debug
     {$CADDY_DEBUG}
-    http_port 8080
 }
 
 {$SERVER_NAME}
