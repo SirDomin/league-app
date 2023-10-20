@@ -33,7 +33,6 @@ class GameRepository extends ServiceEntityRepository
 
         try {
             return $result->getQuery()->getOneOrNullResult();
-
         } catch (NonUniqueResultException) {
             dd($matchId);
         }
