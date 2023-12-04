@@ -422,7 +422,7 @@ class Participant
     /**
      * @ORM\Column(type="string", length=255)
      */
-    private $riotIdName;
+    private $riotIdName = '';
 
     /**
      * @ORM\Column(type="string", length=255)

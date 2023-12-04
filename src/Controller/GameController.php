@@ -36,8 +36,9 @@ class GameController extends AbstractController
         $serializer = SerializerBuilder::create()->build();
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+        $accountData = $this->leagueApi->getAccountData($data['puuid']);
 
-        $data = $this->porofessorScrapper->getActiveData($summonerData['name']);
+        $data = $this->porofessorScrapper->getActiveData($summonerData['name'] . '-' . $accountData['tagLine']);
 
         return new Response($serializer->serialize(['data' => $data], 'json'));
     }
@@ -61,7 +62,7 @@ class GameController extends AbstractController
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
-        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name']);
+        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'], $summonerData['id']);
 
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }

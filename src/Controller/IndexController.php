@@ -24,20 +24,6 @@ class IndexController extends AbstractController
        return new JsonResponse(['status' => 'OK']);
     }
 
-    #[Route('/test', name: 'test')]
-    public function test(): JsonResponse
-    {
-        $data = ['sad' => 'aaa'];
-
-        $string = 'vxXy6g7aVB982Xmnwbc9nQ==';
-
-        return new JsonResponse([
-            'encoded' => $this->leagueApi->encodeKey($data),
-            'decoded' => $this->leagueApi->decodeKey($string),
-        ]);
-    }
-
-
     #[Route('/login', name: 'login', methods: ['POST'])]
     public function login(Request $request): Response
     {

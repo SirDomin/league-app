@@ -2,6 +2,7 @@
 
 namespace App\ApiManager;
 
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class LeagueApi
@@ -16,10 +17,13 @@ class LeagueApi
 
     private ?string $serverName;
 
+    private FilesystemAdapter $cache;
+
     public function __construct(
         private readonly HttpClientInterface $httpClient
     )
     {
+        $this->cache = new FilesystemAdapter();
         $this->token = $_ENV['APP_RIOT_TOKEN'];
         $this->secret = $_ENV['APP_SECRET'];
         $this->cypherMethod = 'AES-256-CBC';
@@ -43,8 +47,20 @@ class LeagueApi
         return openssl_encrypt(json_encode($data), $this->cypherMethod, $this->secret, $options=0, $this->iv);
     }
 
-    private function getRequest(string $url): array
+    private function getRequest(string $url, bool $allowCache = true, $cacheTime = 3600): array
     {
+        $cacheKey = $this->sanitizeString($url);
+        $cacheItem = $this->cache->getItem($cacheKey);
+
+        if ($allowCache === true) {
+            if ($cacheItem->isHit()) {
+                $resp = $cacheItem->get();
+                $resp['cached'] = true;
+
+                return $resp;
+            }
+        }
+
         $headers = [
             'X-Riot-Token' => $this->token
         ];
@@ -61,7 +77,17 @@ class LeagueApi
             throw new \Exception('API Rate exceeded');
         }
 
-        return json_decode($response->getContent(false), true);
+        if ($response->getStatusCode() === 200) {
+            $resp = json_decode($response->getContent(false), true);
+            $resp['cached'] = false;
+
+            $cacheItem->set($resp);
+            $cacheItem->expiresAfter($cacheTime);
+
+            $this->cache->save($cacheItem);
+        }
+
+        return $resp;
     }
 
     public function getSummonerData(string $summonerName): array
@@ -119,7 +145,7 @@ class LeagueApi
 
         $url = 'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/' . $summonerData['puuid'] . '/ids?start=' . $start . '&count=' . $limit;
 
-        $response = $this->getRequest($url);
+        $response = $this->getRequest($url, true, 60);
 
         return $response;
     }
@@ -130,7 +156,7 @@ class LeagueApi
 
         $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/' . $summonerData['id'];
 
-        $response = $this->getRequest($url);
+        $response = $this->getRequest($url, false);
 
         if (isset($response['status']) && $response['status']['status_code'] === 404) {
             return null;
@@ -139,6 +165,13 @@ class LeagueApi
         $response['summonerData'] = $summonerData;
 
         return $response;
+    }
+
+
+    private function sanitizeString($input) {
+        $pattern = '/[{}()\/@:]/';
+        $sanitized = preg_replace($pattern, '', $input);
+        return $sanitized;
     }
 
 }

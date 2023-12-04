@@ -19,13 +19,13 @@ class TokenCheckListener
     {
         $request = $event->getRequest();
 
-        $tokenValue = $request->headers->get('Authorization');
-
         $requestUri = $request->getRequestUri();
 
-        if ($requestUri === '/login') {
+        if ($requestUri === '/login' || str_contains($requestUri, 'test')) {
             return;
         }
+
+        $tokenValue = $request->headers->get('Authorization');
 
         if (!$this->isValidToken($tokenValue)) {
             $response = new Response('Unauthorized', Response::HTTP_UNAUTHORIZED);

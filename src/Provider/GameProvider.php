@@ -7,6 +7,7 @@ use App\Entity\Game;
 use App\Entity\Metadata;
 use App\Repository\GameRepository;
 use App\Repository\ParticipantRepository;
+use App\Repository\StatsRepository;
 use App\Transformer\InfoTransformer;
 
 class GameProvider
@@ -15,6 +16,7 @@ class GameProvider
         private readonly GameRepository $gameRepository,
         private readonly LeagueApi $leagueApi,
         private readonly ParticipantRepository $participantRepository,
+        private readonly StatsRepository $statsRepository,
     )
     {
     }
@@ -34,7 +36,7 @@ class GameProvider
         return $game;
     }
 
-    public function connectParticipants($data): array
+    public function connectParticipants($data, $summonerId): array
     {
         $participants = [];
 
@@ -44,9 +46,13 @@ class GameProvider
             $ranking = [];
 
             foreach ($division as $div) {
-                $ranking[] = [
-                    $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'] ?? '', $div['rank'] ?? '', $div['leaguePoints'] ?? '')
-                ];
+                if (is_array($div)) {
+                    $ranking[] = [
+                        $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'] ?? '', $div['rank'] ?? '', $div['leaguePoints'] ?? '')
+                    ];
+                } else {
+                }
+
             }
 
             $participantData = [];
@@ -54,7 +60,7 @@ class GameProvider
                 $participantData = $data['summonerData'];
             }
 
-            $participants[] = [
+            $playerData = [
                 'games_played' => $this->gameRepository->countAllGamesWithPlayerBySummonerId($participant['summonerId']),
                 'summoner_id' => $participant['summonerId'],
                 'summoner_name' => $participant['summonerName'],
@@ -65,6 +71,13 @@ class GameProvider
                 'participant_data' => $participantData,
                 'full_data' => $participant,
             ];
+
+            if ($summonerId !== null) {
+                $playerData['team_winratio'] = $this->statsRepository->getWinratioByChampion($summonerId, $participant['championId']);
+                $playerData['enemy_winratio'] = $this->statsRepository->getWinratioByChampion($summonerId, $participant['championId'], false);
+            }
+
+            $participants[] = $playerData;
         }
 
         return $participants;
@@ -152,7 +165,7 @@ class GameProvider
     {
     }
 
-    public function provideActiveGameForUser(string $summonerName): ?array
+    public function provideActiveGameForUser(string $summonerName, $summonerId): ?array
     {
         $gameData = $this->leagueApi->getCurrentGame($summonerName);
 
@@ -160,6 +173,6 @@ class GameProvider
             return null;
         }
 
-        return $this->connectParticipants($gameData);
+        return $this->connectParticipants($gameData, $summonerId);
     }
 }

@@ -53,7 +53,7 @@ class SummonerController extends AbstractController
               ];
         }
 
-        return new Response($serializer->serialize(['info' => $this->gameProvider->connectParticipants(['participants' => $participantsData])], 'json'));
+        return new Response($serializer->serialize(['info' => $this->gameProvider->connectParticipants(['participants' => $participantsData], null)], 'json'));
     }
 
     #[Route('/summoner/{summonerName}/count', name: 'summoner-count', methods: ['GET'])]
