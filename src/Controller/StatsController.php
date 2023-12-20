@@ -49,14 +49,14 @@ class StatsController extends AbstractController
         return new JsonResponse($this->statsRepository->getAvailableQueues($summonerData['id']));
     }
 
-    #[Route('/stats/champion/{championId}/{queueId}', name: 'stats-champion')]
-    public function statsChampion(Request $request, int $championId, int $queueId): JsonResponse
+    #[Route('/stats/champion/{championId}/{queueId}/{position}', name: 'stats-champion')]
+    public function statsChampion(Request $request, int $championId, int $queueId, string $position): JsonResponse
     {
         $data = $request->getSession()->get('data');
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
-        return new JsonResponse($this->statsRepository->getInfoAboutChampion($summonerData['id'], $queueId, $championId));
+        return new JsonResponse($this->statsRepository->getInfoAboutChampion($summonerData['id'], $queueId, $championId, $position));
     }
 
      #[Route('/stats/by-queue/{queueId}', name: 'stats-by-queue')]

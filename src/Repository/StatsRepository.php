@@ -175,9 +175,13 @@ class StatsRepository extends ServiceEntityRepository
                     ->andWhere('gi.queueId = :queueId')
                     ->setParameter('queueId', $queueId)
                 ;
-
-
+        } else {
+            $sumOfWinsAndLosesQuery =
+                $sumOfWinsAndLosesQuery
+                    ->andWhere('gi.queueId IN (400, 420, 430, 440)')
+            ;
         }
+
         $results = $sumOfWinsAndLosesQuery->getQuery()->getResult();
 
         foreach ($results as &$result) {
@@ -187,7 +191,7 @@ class StatsRepository extends ServiceEntityRepository
         return $results;
     }
 
-    public function getInfoAboutChampion($summonerId, int $queueId, int $championId): array
+    public function getInfoAboutChampion($summonerId, int $queueId, int $championId, string $position): array
     {
         $query =
             $this->createQueryBuilder('g')
@@ -201,13 +205,6 @@ class StatsRepository extends ServiceEntityRepository
                 ->leftJoin('i.participants', 'participant')
                 ->where('i.queueId = :queueId')
                 ->andWhere('participant.summonerId != :summonerId')
-                ->andWhere('participant.individualPosition = (
-                    SELECT pp.individualPosition
-                    FROM ' . Participant::class . ' pp
-                    WHERE pp.info = i
-                    AND pp.summonerId = :summonerId
-                    AND pp.championId = :championId
-                )')
                 ->andWhere('participant.teamId != (
                     SELECT p.teamId
                     FROM ' . Participant::class . ' p
@@ -221,6 +218,17 @@ class StatsRepository extends ServiceEntityRepository
                 ->setParameter('summonerId', $summonerId)
                 ->setParameter('championId', $championId)
             ;
+
+        if ($position === 'same') {
+            $query =
+                $query->andWhere('participant.individualPosition = (
+                    SELECT pp.individualPosition
+                    FROM ' . Participant::class . ' pp
+                    WHERE pp.info = i
+                    AND pp.summonerId = :summonerId
+                    AND pp.championId = :championId
+                )');
+        }
 
         $results = $query->getQuery()->getResult();
 

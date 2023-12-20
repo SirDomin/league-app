@@ -67,6 +67,37 @@ class GameController extends AbstractController
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
 
+    #[Route('/game/active-client', name: 'game-find-active-client', methods: ['POST'])]
+    public function findActiveClient(Request $request): Response
+    {
+        $data = $request->getSession()->get('data');
+
+        $serializer = SerializerBuilder::create()->build();
+
+        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+
+        $content = json_decode($request->getContent(), true);
+
+        $clientData = [
+            'participants' => [],
+        ];
+
+        foreach ($content['gameData']['teamOne'] as $participant) {
+            $participant['teamId'] = 100;
+            $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
+
+            $participant['summonerId'] = $participantData['id'];
+            $participant['puuid'] = $participantData['puuid'];
+
+            $participant['xd'] = $participantData;
+            $clientData['participants'][] = $participant;
+        }
+
+        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'], $summonerData['id'], $clientData);
+
+        return new Response($serializer->serialize(['info' => $game], 'json'));
+    }
+
     #[Route('/game/history/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['GET'])]
     public function getHistoryForUser(int $limit, int $start, int $lastTimestamp, Request $request): Response
     {

@@ -40,9 +40,17 @@ class GameProvider
     {
         $participants = [];
 
+        if (!isset($data['participants'])) {
+            return [];
+        }
+
         foreach ($data['participants'] as $participant) {
             $division = $this->leagueApi->getSummonerLeagues($participant['summonerId']);
+            $account = [];
+            if (isset($participant['puuid'])) {
+                $account = $this->leagueApi->getAccountData($participant['puuid']);
 
+            }
             $ranking = [];
 
             foreach ($division as $div) {
@@ -69,8 +77,18 @@ class GameProvider
                 'url_opgg' => 'https://www.op.gg/summoners/eune/' . $participant['summonerName'],
                 'division' => $ranking,
                 'participant_data' => $participantData,
+                'account' => $account,
                 'full_data' => $participant,
+                'champion_data' => [],
             ];
+
+            if  ($participant['championId']) {
+                $playerData['champion_data'] = $this->leagueApi->getChampionMasteryByChampionId($participant['puuid'], $participant['championId']);
+            }
+
+            if (isset($account['gameName'])) {
+                $playerData['summoner_name'] = $account['gameName'].'#'.$account['tagLine'];
+            }
 
             if ($summonerId !== null) {
                 $playerData['team_winratio'] = $this->statsRepository->getWinratioByChampion($summonerId, $participant['championId']);
@@ -165,11 +183,17 @@ class GameProvider
     {
     }
 
-    public function provideActiveGameForUser(string $summonerName, $summonerId): ?array
+    public function provideActiveGameForUser(string $summonerName, $summonerId, $clientData = null): ?array
     {
         $gameData = $this->leagueApi->getCurrentGame($summonerName);
 
+        if ($clientData !== null) {
+            return $this->connectParticipants($clientData, $summonerId);
+        }
+
         if ($gameData === null) {
+
+
             return null;
         }
 

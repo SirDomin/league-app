@@ -635,6 +635,11 @@ class Participant
     private $win;
 
     /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $riotIdGameName = '';
+
+    /**
      * @return mixed
      */
     public function getId()
@@ -2633,5 +2638,21 @@ class Participant
     public function setComment($comment): void
     {
         $this->comment = $comment;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRiotIdGameName(): string
+    {
+        return $this->riotIdGameName;
+    }
+
+    /**
+     * @param string $riotIdGameName
+     */
+    public function setRiotIdGameName(string $riotIdGameName): void
+    {
+        $this->riotIdGameName = $riotIdGameName;
     }
 }

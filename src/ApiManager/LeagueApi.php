@@ -55,9 +55,12 @@ class LeagueApi
         if ($allowCache === true) {
             if ($cacheItem->isHit()) {
                 $resp = $cacheItem->get();
-                $resp['cached'] = true;
+                if (is_array($resp) && sizeof($resp) > 0) {
+                    $resp['cached'] = true;
 
-                return $resp;
+                    return $resp;
+                }
+
             }
         }
 
@@ -85,6 +88,8 @@ class LeagueApi
             $cacheItem->expiresAfter($cacheTime);
 
             $this->cache->save($cacheItem);
+        } else {
+            return [];
         }
 
         return $resp;
@@ -109,6 +114,13 @@ class LeagueApi
         $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
 
         return $this->getRequest($url);
+    }
+
+    public function getChampionMasteryByChampionId(string $puuid, int $championId): array
+    {
+        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/'.$puuid.'/by-champion/'.$championId;
+
+        return $this->getRequest($url, true, 36000);
     }
 
     public function getAccountData(string $puuid): array
