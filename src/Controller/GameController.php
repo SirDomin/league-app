@@ -64,7 +64,6 @@ class GameController extends AbstractController
 
         $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'], $summonerData['id']);
 
-        return new Response($serializer->serialize(['info' => []], 'json'));
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
 
