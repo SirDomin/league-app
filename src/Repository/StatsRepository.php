@@ -151,7 +151,32 @@ class StatsRepository extends ServiceEntityRepository
         return $queues->getQuery()->getResult();
     }
 
-    public function getWinratioForAllChampions($summonerId, ?int $queueId = null): array
+    public function getAvailableSeasons(string $summonerId): array
+    {
+        $seasons = $this->createQueryBuilder('g')
+            ->select('gi.gameVersion')
+            ->leftJoin('g.info', 'gi')
+            ->leftJoin('gi.participants', 'p')
+            ->where('p.summonerId = :summonerId')
+            ->setParameter('summonerId', $summonerId)
+            ->groupBy('gi.gameVersion')
+            ->getQuery()
+            ->getResult()
+        ;
+
+        $seasonsArray = [];
+
+        foreach ($seasons as $season) {
+            $seasonsArray[] = explode('.', $season['gameVersion'])[0];
+        }
+
+        $uniqueSeasons = array_values(array_map('intval', array_unique($seasonsArray)));
+        sort($uniqueSeasons);
+
+        return $uniqueSeasons;
+    }
+
+    public function getWinratioForAllChampions($summonerId, ?int $queueId = null, ?int $season = null): array
     {
         $sumOfWinsAndLosesQuery = $this->createQueryBuilder('g')
             ->select('p.championId as championId,
@@ -182,6 +207,14 @@ class StatsRepository extends ServiceEntityRepository
             ;
         }
 
+        if ($season !== null) {
+            $sumOfWinsAndLosesQuery =
+                $sumOfWinsAndLosesQuery
+                    ->andWhere('gi.gameVersion LIKE :season')
+                    ->setParameter('season', $season . '%')
+            ;
+        }
+
         $results = $sumOfWinsAndLosesQuery->getQuery()->getResult();
 
         foreach ($results as &$result) {
@@ -191,7 +224,7 @@ class StatsRepository extends ServiceEntityRepository
         return $results;
     }
 
-    public function getInfoAboutChampion($summonerId, int $queueId, int $championId, string $position): array
+    public function getInfoAboutChampion($summonerId, int $queueId, int $championId, string $position, int $season = 0): array
     {
         $query =
             $this->createQueryBuilder('g')
@@ -230,11 +263,22 @@ class StatsRepository extends ServiceEntityRepository
                 )');
         }
 
+        if ($season !== 0) {
+            $query =
+                $query
+                    ->andWhere('i.gameVersion LIKE :season')
+                    ->setParameter('season', $season . '%')
+            ;
+        }
         $results = $query->getQuery()->getResult();
 
-        $results = array_filter($results, function ($item) {
-            return $item['total'] > 2;
-        });
+        if (sizeof($filteredResults = array_filter($results, function ($item) {return $item['total'] > 10;})) > 5) {
+            $results = $filteredResults;
+        } else if (sizeof($filteredResults = array_filter($results, function ($item) {return $item['total'] > 5;})) > 5) {
+            $results = $filteredResults;
+        }else if (sizeof($filteredResults = array_filter($results, function ($item) {return $item['total'] > 2;})) > 5) {
+            $results = $filteredResults;
+        }
 
         foreach ($results as &$result) {
             $result['winRatio'] = ($result['total'] > 0) ? round(($result['wins'] * 100) / $result['total'], 2) : 100.0;

@@ -130,6 +130,13 @@ class LeagueApi
         return $this->getRequest($url);
     }
 
+    public function getAccountDataByRiotId(string $gameName, string $gameTag): array
+    {
+        $url = 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/' . $gameName . '/' . $gameTag;
+
+        return $this->getRequest($url);
+    }
+
     public function getSummonerLeagues(string $summonerId): array
     {
         $url = \sprintf('https://' . $this->serverName . '.api.riotgames.com/lol/league/v4/entries/by-summoner/%s', $summonerId);

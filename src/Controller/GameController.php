@@ -85,7 +85,7 @@ class GameController extends AbstractController
         $gameMode = $content['gameData']['queue']['id'];
 
 
-        if ($gameMode === 420) {
+        if ($gameMode === 1700) {
             foreach ($content['gameData']['teamOne'] as $participant) {
                 $participant['teamId'] = 100;
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
@@ -93,17 +93,6 @@ class GameController extends AbstractController
                 $participant['summonerId'] = $participantData['id'];
                 $participant['puuid'] = $participantData['puuid'];
 
-                $participant['xd'] = $participantData;
-                $clientData['participants'][] = $participant;
-            }
-            foreach ($content['gameData']['teamTwo'] as $participant) {
-                $participant['teamId'] = 200;
-                $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
-
-                $participant['summonerId'] = $participantData['id'];
-                $participant['puuid'] = $participantData['puuid'];
-
-                $participant['xd'] = $participantData;
                 $clientData['participants'][] = $participant;
             }
         } else {
@@ -111,10 +100,18 @@ class GameController extends AbstractController
                 $participant['teamId'] = 100;
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
 
-                $participant['summonerId'] = $participantData['id'];
-                $participant['puuid'] = $participantData['puuid'];
+                $participant['summonerId'] = $participantData['id'] ?? 0;
+                $participant['puuid'] = $participantData['puuid'] ?? 0;
 
-                $participant['xd'] = $participantData;
+                $clientData['participants'][] = $participant;
+            }
+            foreach ($content['gameData']['teamTwo'] as $participant) {
+                $participant['teamId'] = 200;
+                $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
+
+                $participant['summonerId'] = $participantData['id'] ?? 0;
+                $participant['puuid'] = $participantData['puuid'] ?? 0;
+
                 $clientData['participants'][] = $participant;
             }
         }

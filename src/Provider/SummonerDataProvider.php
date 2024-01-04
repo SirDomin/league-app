@@ -13,9 +13,11 @@ class SummonerDataProvider
 
     }
 
-    public function getDataByName(string $summonerName): array
+    public function getDataByName(string $gameName, string $gameTag): array
     {
-        return $this->leagueApi->getSummonerData($summonerName);
+        $data =  $this->leagueApi->getAccountDataByRiotId($gameName, $gameTag);
+
+        return $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
     }
 
     public function getPuuidByName(string $summonerName): string

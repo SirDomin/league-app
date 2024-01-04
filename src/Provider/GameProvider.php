@@ -71,10 +71,10 @@ class GameProvider
             $playerData = [
                 'games_played' => $this->gameRepository->countAllGamesWithPlayerBySummonerId($participant['summonerId']),
                 'summoner_id' => $participant['summonerId'],
-                'summoner_name' => $participant['summonerName'],
+                'summoner_name' => $participant['summonerName'] ?? $account['gameName'],
                 'team_id' => $participant['teamId'],
                 'champion_id' => $participant['championId'],
-                'url_opgg' => 'https://www.op.gg/summoners/eune/' . $participant['summonerName'],
+                'url_opgg' => 'https://www.op.gg/summoners/eune/' . ($participant['summonerName'] ?? $account['gameName']),
                 'division' => $ranking,
                 'participant_data' => $participantData,
                 'account' => $account,
