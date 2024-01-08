@@ -45,21 +45,33 @@ class GameProvider
         }
 
         foreach ($data['participants'] as $participant) {
-            $division = $this->leagueApi->getSummonerLeagues($participant['summonerId']);
+            $ranking = [];
             $account = [];
+            $rankedInfo = [];
+
+            if (isset($participant['ranked'])) {
+                $rank = $participant['ranked']['queueMap'];
+                $ranking[] = [
+                    'RANKED_FLEX_SR' => \sprintf('%s %s ( %d lp)', $rank['RANKED_FLEX_SR']['tier'] ?? '', ($rank['RANKED_FLEX_SR']['division'] === 'NA' ? '' : $rank['RANKED_FLEX_SR']['division']), $rank['RANKED_FLEX_SR']['leaguePoints'] ?? ''),
+                    'RANKED_SOLO_5x5' => \sprintf('%s %s ( %d lp)', $rank['RANKED_SOLO_5x5']['tier'] ?? '', ($rank['RANKED_SOLO_5x5']['division'] === 'NA' ? '' : $rank['RANKED_SOLO_5x5']['division']), $rank['RANKED_SOLO_5x5']['leaguePoints'] ?? ''),
+                ];
+
+                $rankedInfo[] = $participant['ranked'];
+            } else {
+                $division = $this->leagueApi->getSummonerLeagues($participant['summonerId']);
+
+                foreach ($division as $div) {
+                    if (is_array($div)) {
+                        $ranking[] = [
+                            $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'] ?? '', $div['rank'] ?? '', $div['leaguePoints'] ?? '')
+                        ];
+                    } else {
+                    }
+
+                }
+            }
             if (isset($participant['puuid'])) {
                 $account = $this->leagueApi->getAccountData($participant['puuid']);
-
-            }
-            $ranking = [];
-
-            foreach ($division as $div) {
-                if (is_array($div)) {
-                    $ranking[] = [
-                        $div['queueType'] => \sprintf('%s %s ( %d lp)', $div['tier'] ?? '', $div['rank'] ?? '', $div['leaguePoints'] ?? '')
-                    ];
-                } else {
-                }
 
             }
 
@@ -80,6 +92,7 @@ class GameProvider
                 'account' => $account,
                 'full_data' => $participant,
                 'champion_data' => [],
+                'ranked_data' => $rankedInfo,
             ];
 
             if  ($participant['championId']) {
@@ -121,7 +134,7 @@ class GameProvider
         foreach ($lastGames as $gameId) {
             $game = $this->gameRepository->findByMatchId($gameId);
 
-            if (!$game) {
+            if (!$game && $gameId !== false) {
                 $gamesResult[] = [
                     'gameId' => $gameId,
                 ];

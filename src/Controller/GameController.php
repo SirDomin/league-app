@@ -4,9 +4,12 @@ namespace App\Controller;
 
 use App\ApiManager\LeagueApi;
 use App\DataScrapper\PorofessorScrapper;
+use App\Entity\Clip;
+use App\Entity\Game;
 use App\Entity\Participant;
 use App\Provider\GameProvider;
 use App\Provider\SummonerDataProvider;
+use App\Repository\ClipRepository;
 use App\Repository\GameRepository;
 use App\Repository\ParticipantRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,7 +28,8 @@ class GameController extends AbstractController
         private readonly GameRepository $gameRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ParticipantRepository $participantRepository,
-        private readonly PorofessorScrapper $porofessorScrapper
+        private readonly PorofessorScrapper $porofessorScrapper,
+        private readonly ClipRepository $clipRepository,
     ) { }
 
     #[Route('/game/active-data', name: 'game')]
@@ -90,6 +94,12 @@ class GameController extends AbstractController
                 $participant['teamId'] = 100;
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
 
+                if ($participantData === []) {
+                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['data']['gameName'], $participant['data']['tagLine']);
+
+                    $participantData = $this->leagueApi->getSummonerDataByPuuid($accountData['puuid']);
+                }
+
                 $participant['summonerId'] = $participantData['id'];
                 $participant['puuid'] = $participantData['puuid'];
 
@@ -100,6 +110,12 @@ class GameController extends AbstractController
                 $participant['teamId'] = 100;
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
 
+                if ($participantData === []) {
+                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['data']['gameName'], $participant['data']['tagLine']);
+
+                    $participantData = $this->leagueApi->getSummonerDataByPuuid($accountData['puuid']);
+                }
+
                 $participant['summonerId'] = $participantData['id'] ?? 0;
                 $participant['puuid'] = $participantData['puuid'] ?? 0;
 
@@ -108,6 +124,12 @@ class GameController extends AbstractController
             foreach ($content['gameData']['teamTwo'] as $participant) {
                 $participant['teamId'] = 200;
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
+
+                if ($participantData === []) {
+                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['data']['gameName'], $participant['data']['tagLine']);
+
+                    $participantData = $this->leagueApi->getSummonerDataByPuuid($accountData['puuid']);
+                }
 
                 $participant['summonerId'] = $participantData['id'] ?? 0;
                 $participant['puuid'] = $participantData['puuid'] ?? 0;
@@ -211,6 +233,21 @@ class GameController extends AbstractController
         );
     }
 
+    #[Route('/game/byId/{id}', name: 'game-get-by-id', methods: ['GET'])]
+    public function getById(int $id): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        $game = $this->gameRepository->find($id);
+
+        return new Response($serializer->serialize(
+            [
+                'game' => $game
+            ],
+            'json')
+        );
+    }
+
     #[Route('/game/save-result', name: 'save-game-result', methods: ['POST'])]
     public function edit(Request $request): Response
     {
@@ -218,12 +255,28 @@ class GameController extends AbstractController
 
         $content = json_decode($request->getContent(), true);
 
-        foreach ($content as $data) {
+        foreach ($content['participants'] as $data) {
             /** @var Participant $summoner */
             $summoner = $this->participantRepository->findOneBy(['id' => (int) $data['id']]);
 
             $summoner->setComment($data['comment']);
             $this->entityManager->persist($summoner);
+        }
+
+        /** @var Game|null $game */
+        $game = $this->gameRepository->getGameByInfoId($content['infoId']);
+
+        foreach ($content['clips'] as $clip) {
+            if ($clip['id'] !== null) {
+                $clipEntity = $this->clipRepository->find((int) $clip['id']);
+            } else {
+                $clipEntity = new Clip();
+            }
+            $clipEntity->setUrl($clip['url']);
+            $clipEntity->setTitle($clip['title']);
+            $clipEntity->setInfo($game->getInfo());
+
+            $this->entityManager->persist($clipEntity);
         }
 
         $this->entityManager->flush();

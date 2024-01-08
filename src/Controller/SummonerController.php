@@ -81,6 +81,18 @@ class SummonerController extends AbstractController
             ->getResult()
         ;
 
+        $participantsExact = $this->participantRepository
+            ->createQueryBuilder('p')
+            ->select('p.puuid,  p.summonerId')
+            ->where('p.summonerName = :name')
+            ->setParameter('name',  $playerName)
+            ->groupBy('p.puuid', 'p.summonerId')
+            ->getQuery()
+            ->getResult()
+        ;
+
+        $participants = array_merge($participants, $participantsExact);
+
 //        return new Response($serializer->serialize(['info' => $participants], 'json'));
 
         foreach ($participants as $participant) {

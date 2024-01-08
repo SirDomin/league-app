@@ -143,6 +143,20 @@ class GameRepository extends ServiceEntityRepository
         return count($results);
     }
 
+    public function getGameByInfoId(int $id): ?Game
+    {
+        $queryBuilder = $this
+            ->createQueryBuilder('g')
+            ->select('g')
+            ->addSelect('i')
+            ->leftJoin('g.info', 'i')
+            ->where('i.id = :id')
+            ->setParameter('id', $id)
+        ;
+
+        return $queryBuilder->getQuery()->getOneOrNullResult();
+    }
+
     public function getLastGame(): Game
     {
         $queryBuilder = $this

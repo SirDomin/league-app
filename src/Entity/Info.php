@@ -79,6 +79,12 @@ class Info
      */
     private $participants;
 
+
+    /**
+     * @ORM\OneToMany(targetEntity="Clip", mappedBy="info", cascade={"persist"})
+     */
+    private $clips;
+
     /**
      * @ORM\Column(type="string", length=255)
      */
