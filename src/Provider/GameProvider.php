@@ -93,6 +93,7 @@ class GameProvider
                 'full_data' => $participant,
                 'champion_data' => [],
                 'ranked_data' => $rankedInfo,
+                'client_id' => $participant['clientId'] ?? null,
             ];
 
             if  ($participant['championId']) {

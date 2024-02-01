@@ -42,8 +42,7 @@ class IndexController extends AbstractController
         if ($summonerData) {
             if (
                 $summonerData['name'] === $content['summonerData']['displayName'] &&
-                $summonerData['profileIconId'] === $content['summonerData']['profileIconId'] &&
-                $summonerData['summonerLevel'] === $content['summonerData']['summonerLevel']
+                $summonerData['profileIconId'] === $content['summonerData']['profileIconId']
             ) {
                 $dataToSave = [
                     'server' => $platformName,

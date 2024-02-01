@@ -52,6 +52,7 @@ class SummonerController extends AbstractController
                   'puuid' => $summonerData['puuid'],
                   'teamId' => null,
                   'championId' => null,
+                  'clientId' => $data['clientId'],
               ];
         }
 
