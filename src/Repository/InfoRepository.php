@@ -2,22 +2,22 @@
 
 namespace App\Repository;
 
-use App\Entity\Participant;
+use App\Entity\Info;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-class ParticipantRepository extends ServiceEntityRepository
+class InfoRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Participant::class);
+        parent::__construct($registry, Info::class);
     }
 
-    public function getDataForField(string $fieldName): array
+    public function getDataForField(string $fieldName)
     {
-        $qb = $this->createQueryBuilder('p')
-            ->select('p.' . $fieldName)
-            ->addGroupBy('p.' . $fieldName);
+        $qb = $this->createQueryBuilder('i')
+            ->select('i.' . $fieldName)
+            ->addGroupBy('i.' . $fieldName);
 
         $result = $qb->getQuery()->getResult();
 

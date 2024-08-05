@@ -50,7 +50,7 @@ class GameProvider
             $rankedInfo = [];
 
             if (isset($participant['ranked'])) {
-                $rank = $participant['ranked']['queueMap'];
+                $rank = $participant['ranked'];
                 $ranking[] = [
                     'RANKED_FLEX_SR' => \sprintf('%s %s ( %d lp)', $rank['RANKED_FLEX_SR']['tier'] ?? '', ($rank['RANKED_FLEX_SR']['division'] === 'NA' ? '' : $rank['RANKED_FLEX_SR']['division']), $rank['RANKED_FLEX_SR']['leaguePoints'] ?? ''),
                     'RANKED_SOLO_5x5' => \sprintf('%s %s ( %d lp)', $rank['RANKED_SOLO_5x5']['tier'] ?? '', ($rank['RANKED_SOLO_5x5']['division'] === 'NA' ? '' : $rank['RANKED_SOLO_5x5']['division']), $rank['RANKED_SOLO_5x5']['leaguePoints'] ?? ''),
@@ -126,16 +126,28 @@ class GameProvider
         return $this->parseGame($this->leagueApi->getGameById($matchId));
     }
 
-    public function getHistory(string $summonerName, int $limit = 0, int $start = 0, int $lastTimestamp = 0): ?array
+
+    public function provideGameById(string $id): ?Game
     {
-        $lastGames = $this->leagueApi->getGamesHistory($summonerName, $limit, $start);
+        $game = $this->gameRepository->find($id);
+
+        if ($game) {
+            return $game;
+        }
+
+        return null;
+    }
+
+    public function getHistory(string $puuid, int $limit = 0, int $start = 0, int $lastTimestamp = 0): ?array
+    {
+        $lastGames = $this->leagueApi->getGamesHistory($puuid, $limit, $start);
 
         $gamesResult = [];
 
         foreach ($lastGames as $gameId) {
             $game = $this->gameRepository->findByMatchId($gameId);
 
-            if (!$game && $gameId !== false) {
+            if (!$game && $gameId !== false && $gameId !== true) {
                 $gamesResult[] = [
                     'gameId' => $gameId,
                 ];
@@ -164,6 +176,11 @@ class GameProvider
         }
 
         return $gamesResult;
+    }
+
+    public function getFilteredHistory(string $puuid, int $limit = 0, int $start = 0, int $lastTimestamp = 0, array $filters = []) {
+
+        return $this->gameRepository->paginateFilteredHistory($puuid, $start, $limit, $filters);
     }
 
     public function getGamesWithPlayer(string $summonerName): array
@@ -197,9 +214,11 @@ class GameProvider
     {
     }
 
-    public function provideActiveGameForUser(string $summonerName, $summonerId, $clientData = null): ?array
+    public function provideActiveGameForUser(string $summonerName = null, $summonerId, $clientData = null): ?array
     {
-        $gameData = $this->leagueApi->getCurrentGame($summonerName);
+        if ($summonerName) {
+            $gameData = $this->leagueApi->getCurrentGame($summonerName);
+        }
 
         if ($clientData !== null) {
             return $this->connectParticipants($clientData, $summonerId);

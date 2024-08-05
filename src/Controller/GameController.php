@@ -3,15 +3,18 @@
 namespace App\Controller;
 
 use App\ApiManager\LeagueApi;
+use App\Calculator\ScoreCalculator;
 use App\DataScrapper\PorofessorScrapper;
 use App\Entity\Clip;
 use App\Entity\Game;
 use App\Entity\Participant;
+use App\Provider\FilterProvider;
 use App\Provider\GameProvider;
 use App\Provider\SummonerDataProvider;
 use App\Repository\ClipRepository;
 use App\Repository\GameRepository;
 use App\Repository\ParticipantRepository;
+use App\Utils\GameBackfiller;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializerBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,6 +22,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+
+@ini_set("memory_limit",-1);
 
 class GameController extends AbstractController
 {
@@ -30,6 +35,9 @@ class GameController extends AbstractController
         private readonly ParticipantRepository $participantRepository,
         private readonly PorofessorScrapper $porofessorScrapper,
         private readonly ClipRepository $clipRepository,
+        private readonly GameBackfiller $gameBackfiller,
+        private readonly ScoreCalculator $scoreCalculator,
+        private readonly FilterProvider $filterProvider,
     ) { }
 
     #[Route('/game/active-data', name: 'game')]
@@ -42,7 +50,7 @@ class GameController extends AbstractController
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
         $accountData = $this->leagueApi->getAccountData($data['puuid']);
 
-        $data = $this->porofessorScrapper->getActiveData($summonerData['name'] . '-' . $accountData['tagLine']);
+        $data = $this->porofessorScrapper->getActiveData($summonerData['gameName'] . '-' . $accountData['tagLine']);
 
         return new Response($serializer->serialize(['data' => $data], 'json'));
     }
@@ -54,6 +62,7 @@ class GameController extends AbstractController
 
         $game = $this->gameProvider->provideGameByMatchId($puuid);
 
+        $game = $this->scoreCalculator->calculateScoreForGame($game);
         return new Response($serializer->serialize($game, 'json'));
     }
 
@@ -66,7 +75,7 @@ class GameController extends AbstractController
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
-        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'], $summonerData['id']);
+        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'] ?? null, $summonerData['id']);
 
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
@@ -95,7 +104,7 @@ class GameController extends AbstractController
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
 
                 if ($participantData === []) {
-                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['data']['gameName'], $participant['data']['tagLine']);
+                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['gameName'], $participant['tagLine']);
 
                     $participantData = $this->leagueApi->getSummonerDataByPuuid($accountData['puuid']);
                 }
@@ -111,7 +120,7 @@ class GameController extends AbstractController
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
 
                 if ($participantData === []) {
-                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['data']['gameName'], $participant['data']['tagLine']);
+                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['gameName'], $participant['tagLine']);
 
                     $participantData = $this->leagueApi->getSummonerDataByPuuid($accountData['puuid']);
                 }
@@ -126,7 +135,7 @@ class GameController extends AbstractController
                 $participantData = $this->leagueApi->getSummonerData($participant['summonerName']);
 
                 if ($participantData === []) {
-                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['data']['gameName'], $participant['data']['tagLine']);
+                    $accountData = $this->leagueApi->getAccountDataByRiotId($participant['gameName'], $participant['tagLine']);
 
                     $participantData = $this->leagueApi->getSummonerDataByPuuid($accountData['puuid']);
                 }
@@ -138,24 +147,93 @@ class GameController extends AbstractController
             }
         }
 
-        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'], $summonerData['id'], $clientData);
+        $game = $this->gameProvider->provideActiveGameForUser($summonerData['name'] ?? null, $summonerData['id'], $clientData);
 
         return new Response($serializer->serialize(['info' => $game], 'json'));
     }
 
-    #[Route('/game/history/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['GET'])]
+    #[Route('/game/history/{limit}/{start}/{lastTimestamp}', name: 'game-get-history', methods: ['POST'])]
     public function getHistoryForUser(int $limit, int $start, int $lastTimestamp, Request $request): Response
     {
         $data = $request->getSession()->get('data');
 
         $serializer = SerializerBuilder::create()->build();
 
-        $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
+        $content = json_decode($request->getContent(), true);
 
-        $games = $this->gameProvider->getHistory($summonerData['name'], $limit, $start, $lastTimestamp);
+        if (isset($content['filters'])) {
+            $games = $this->gameProvider->getFilteredHistory($data['puuid'], $limit, $start, $lastTimestamp, $content['filters']);
 
-        return new Response($serializer->serialize(['games' => $games], 'json'));
+        } else {
+            $games = $this->gameProvider->getHistory($data['puuid'], $limit, $start, $lastTimestamp);
+        }
+
+        $filteredGames = array_map(function($game) use ($data) {
+            if ($game === null) {
+                return null;
+            }
+            $matchingParticipant = array_filter($game->getInfo()->getParticipants()->toArray(), function($participant) use ($data) {
+                return $participant->getPuuid() === $data['puuid'];
+            });
+
+            if (empty($matchingParticipant)) {
+                return null; // No matching participant found, handle as needed
+            }
+            $participant = reset($matchingParticipant);
+
+            return [
+                'id' => $game->getId(),
+                'metadata' => [
+                    'match_id' => $game->getMetadata()->getMatchId(),
+                ],
+                'info' => [
+                    'game_creation' => $game->getInfo()->getGameCreation(),
+                    'queue_id' => $game->getInfo()->getQueueId(),
+                    'game_duration' => $game->getInfo()->getGameDuration(),
+                    /** Participant $participant */
+                    'participants' => [[
+                        'puuid' => $participant->getPuuid(),
+                        'id' => $participant->getId(),
+                        'win' => $participant->getWin(),
+                        'placement' => $participant->getPlacement(),
+                        'summoner1_id' => $participant->getSummoner1Id(),
+                        'summoner2_id' => $participant->getSummoner2Id(),
+                        'item0' => $participant->getItem0(),
+                        'item1' => $participant->getItem1(),
+                        'item2' => $participant->getItem2(),
+                        'item3' => $participant->getItem3(),
+                        'item4' => $participant->getItem4(),
+                        'item5' => $participant->getItem5(),
+                        'item6' => $participant->getItem6(),
+                        'kills' => $participant->getKills(),
+                        'deaths' => $participant->getDeaths(),
+                        'assists' => $participant->getAssists(),
+                        'neutral_minions_killed' => $participant->getNeutralMinionsKilled(),
+                        'gold_earned' => $participant->getGoldEarned(),
+                        'total_minions_killed' => $participant->getTotalMinionsKilled(),
+                        'champion_name' => $participant->getChampionName(),
+                    ]],
+                ],
+            ];
+        }, $games);
+
+        $filteredGames = array_filter($filteredGames, function($game) {
+            return $game !== null;
+        });
+
+        return new Response($serializer->serialize(['games' => $filteredGames], 'json'));
     }
+
+    #[Route('/game/history/filters', name: 'game-get-history-filters', methods: ['GET'])]
+    public function getHistoryFilters(Request $request): Response
+    {
+        $data = $request->getSession()->get('data');
+
+        $serializer = SerializerBuilder::create()->build();
+
+        return new Response($serializer->serialize($this->filterProvider->getAllFilters(), 'json'));
+    }
+
 
     #[Route('/game/save/{matchId}', name: 'game-save-match-id', methods: ['GET'])]
     public function saveGameByMatchId(string $matchId): Response
@@ -199,7 +277,7 @@ class GameController extends AbstractController
         $data = $request->getSession()->get('data');
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
-        $gameIds = $this->leagueApi->getGamesHistory($summonerData['name'], 1, 0);
+        $gameIds = $this->leagueApi->getGamesHistory($data['puuid'], 1, 0);
 
         $game = $this->gameProvider->provideGameByMatchId($gameIds[0]);
 
@@ -210,6 +288,43 @@ class GameController extends AbstractController
             $this->entityManager->flush();
         }
 
+        return new Response($serializer->serialize(
+            [
+                'game' => $game
+            ],
+            'json')
+        );
+    }
+
+    #[Route('/test', name: 'test')]
+    public function test(Request $request): Response
+    {
+        $data = $request->getSession()->get('data');
+
+        $serializer = SerializerBuilder::create()->build();
+
+        return new Response($serializer->serialize(['filters' => $this->filterProvider->getAllFilters()], 'json'));
+    }
+
+    #[Route('/test2', name: 'test2')]
+    public function test2(Request $request): Response
+    {
+
+        $games = $this->gameRepository->getGamesToBackfill();
+
+        $backfilled = 0;
+        /** @var Game $game */
+        foreach ($games as $game) {
+            if ($this->gameBackfiller->backfillGame($game->getId())) {
+                $backfilled ++;
+            }
+        }
+
+        $game = $this->gameProvider->provideGameByMatchId('EUN1_3622285382');
+
+        $serializer = SerializerBuilder::create()->build();
+
+        dd('backfilled: ', $backfilled);
         return new Response($serializer->serialize(
             [
                 'game' => $game

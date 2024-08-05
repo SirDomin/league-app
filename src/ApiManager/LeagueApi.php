@@ -102,18 +102,21 @@ class LeagueApi
         return $this->getRequest($url);
     }
 
-    public function login(string $summonerName, string $serverName): array
+    public function login(string $summonerName, string $tag, string $serverName): array
     {
-        $url = 'https://' . $serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-name/' . $summonerName;
+        $url = 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/' . $summonerName . '/' . $tag;
+        $data = $this->getRequest($url);
 
-        return $this->getRequest($url);
+        return array_merge($data, $this->getAccountData($data['puuid']));
     }
 
     public function getSummonerDataByPuuid(string $puuid): array
     {
         $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
 
-        return $this->getRequest($url);
+        $data = $this->getRequest($url);
+
+        return array_merge($data, $this->getAccountData($puuid));
     }
 
     public function getChampionMasteryByChampionId(string $puuid, int $championId): array
@@ -158,11 +161,9 @@ class LeagueApi
         return $this->getRequest($url);
     }
 
-    public function getGamesHistory(string $summonerName, int $limit, int $start): array
+    public function getGamesHistory(string $puuid, int $limit, int $start): array
     {
-        $summonerData = $this->getSummonerData($summonerName);
-
-        $url = 'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/' . $summonerData['puuid'] . '/ids?start=' . $start . '&count=' . $limit;
+        $url = 'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/' . $puuid . '/ids?start=' . $start . '&count=' . $limit;
 
         $response = $this->getRequest($url, true, 60);
 
@@ -182,6 +183,20 @@ class LeagueApi
         }
 
         $response['summonerData'] = $summonerData;
+
+        return $response;
+    }
+
+    public function getCurrentGameForUser(string $puuid): ?array
+    {
+
+        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/' . $puuid;
+
+        $response = $this->getRequest($url, false);
+
+        if (isset($response['status']) && $response['status']['status_code'] === 404) {
+            return null;
+        }
 
         return $response;
     }

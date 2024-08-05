@@ -8,12 +8,16 @@ class ParticipantTransformer
 {
     public static function getParticipant($data): Participant
     {
+        $invalidFields = [];
+
         $participant = new Participant();
 
         foreach ($data as $key => $participantData) {
             if (method_exists($participant, 'set'.$key)) {
                 $participant->{'set'.$key}($participantData);
 
+            } else {
+                $invalidFields[] = [$key => $participantData];
             }
 
         }

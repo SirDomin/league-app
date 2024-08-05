@@ -601,6 +601,66 @@ class Challenge
     private $wardsGuarded = 0;
 
     /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $earliestBaron = 0;
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $fastestLegendary = 0;
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $firstTurretKilledTime = 0;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $baronBuffGoldAdvantageOverThreshold = 0;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $firstTurretKilled = 0;
+
+    /**
+     * @var int
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $fistBumpParticipation = 0;
+
+    /**
+     * @var int
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $killingSprees = 0;
+
+    /**
+     * @var int
+     * @ORM\Column(type="float", nullable=true)
+ */
+    private $mejaisFullStackInTime = 0;
+
+    /**
+     * @var int
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $twoWardsOneSweeperCount = 0;
+
+    /**
+     * @var int
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $voidMonsterKill = 0;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $InfernalScalePickup = 0;
+
+    /**
      * @return mixed
      */
     public function getId()
@@ -2374,5 +2434,131 @@ class Challenge
     public function setWardsGuarded(int $wardsGuarded): void
     {
         $this->wardsGuarded = $wardsGuarded;
+    }
+
+    public function getEarliestBaron(): int
+    {
+        return $this->earliestBaron;
+    }
+
+    public function setEarliestBaron(int $earliestBaron): void
+    {
+        $this->earliestBaron = $earliestBaron;
+    }
+
+    public function getFirstTurretKilledTime(): int
+    {
+        return $this->firstTurretKilledTime;
+    }
+
+    public function setFirstTurretKilledTime(int $firstTurretKilledTime): void
+    {
+        $this->firstTurretKilledTime = $firstTurretKilledTime;
+    }
+
+    public function getBaronBuffGoldAdvantageOverThreshold(): int
+    {
+        return $this->baronBuffGoldAdvantageOverThreshold;
+    }
+
+    public function setBaronBuffGoldAdvantageOverThreshold(int $baronBuffGoldAdvantageOverThreshold): void
+    {
+        $this->baronBuffGoldAdvantageOverThreshold = $baronBuffGoldAdvantageOverThreshold;
+    }
+
+    public function getFirstTurretKilled(): int
+    {
+        return $this->firstTurretKilled;
+    }
+
+    public function setFirstTurretKilled(int $firstTurretKilled): void
+    {
+        $this->firstTurretKilled = $firstTurretKilled;
+    }
+
+    public function getFistBumpParticipation(): int
+    {
+        return $this->fistBumpParticipation;
+    }
+
+    public function setFistBumpParticipation(int $fistBumpParticipation): void
+    {
+        $this->fistBumpParticipation = $fistBumpParticipation;
+    }
+
+    public function getKillingSprees(): int
+    {
+        return $this->killingSprees;
+    }
+
+    public function setKillingSprees(int $killingSprees): void
+    {
+        $this->killingSprees = $killingSprees;
+    }
+
+    public function getMejaisFullStackInTime(): int
+    {
+        return $this->mejaisFullStackInTime;
+    }
+
+    public function setMejaisFullStackInTime(int $mejaisFullStackInTime): void
+    {
+        $this->mejaisFullStackInTime = $mejaisFullStackInTime;
+    }
+
+    public function getTwoWardsOneSweeperCount(): int
+    {
+        return $this->twoWardsOneSweeperCount;
+    }
+
+    public function setTwoWardsOneSweeperCount(int $twoWardsOneSweeperCount): void
+    {
+        $this->twoWardsOneSweeperCount = $twoWardsOneSweeperCount;
+    }
+
+    public function getVoidMonsterKill(): int
+    {
+        return $this->voidMonsterKill;
+    }
+
+    public function setVoidMonsterKill(int $voidMonsterKill): void
+    {
+        $this->voidMonsterKill = $voidMonsterKill;
+    }
+
+    public function getFastestLegendary(): int
+    {
+        return $this->fastestLegendary;
+    }
+
+    public function setFastestLegendary(int $fastestLegendary): void
+    {
+        $this->fastestLegendary = $fastestLegendary;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getAssistStreakCount()
+    {
+        return $this->assistStreakCount;
+    }
+
+    /**
+     * @param mixed $assistStreakCount
+     */
+    public function setAssistStreakCount($assistStreakCount): void
+    {
+        $this->assistStreakCount = $assistStreakCount;
+    }
+
+    public function getInfernalScalePickup(): int
+    {
+        return $this->InfernalScalePickup;
+    }
+
+    public function setInfernalScalePickup(int $InfernalScalePickup): void
+    {
+        $this->InfernalScalePickup = $InfernalScalePickup;
     }
 }

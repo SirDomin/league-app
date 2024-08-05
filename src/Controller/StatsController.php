@@ -39,7 +39,7 @@ class StatsController extends AbstractController
         return new JsonResponse($this->statsRepository->getWinratioForAllChampions($summonerData['id']));
     }
 
-    #[Route('/stats', name: 'stats-all', methods: ['POST'])]
+    #[Route('/stats', name: 'stats-all-post', methods: ['POST'])]
     public function stats(Request $request): JsonResponse
     {
         $data = $request->getSession()->get('data');
@@ -90,16 +90,4 @@ class StatsController extends AbstractController
             $this->statsRepository->getWinratioForAllChampions($summonerData['id'], $queueId)
         );
     }
-
-    #[Route('/test', name: 'test')]
-    public function test(Request $request): JsonResponse
-    {
-        $data = $request->getSession()->get('data');
-
-
-        return new JsonResponse(
-            'xd'
-        );
-    }
-
 }

@@ -640,6 +640,74 @@ class Participant
     private $riotIdGameName = '';
 
     /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $totalAllyJungleMinionsKilled = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $totalEnemyJungleMinionsKilled = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $placement = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerAugment1 = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerAugment2 = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerAugment3 = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerAugment4 = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerAugment5 = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerAugment6 = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $playerSubteamId = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $subteamPlacement = null;
+
+    private $score = 0;
+
+
+    public function getScore(): int
+    {
+        return $this->score;
+    }
+
+    public function setScore(int $score)
+    {
+        $this->score = $score;
+    }
+
+    /**
      * @return mixed
      */
     public function getId()
@@ -2654,5 +2722,115 @@ class Participant
     public function setRiotIdGameName(string $riotIdGameName): void
     {
         $this->riotIdGameName = $riotIdGameName;
+    }
+
+    public function getTotalAllyJungleMinionsKilled(): ?int
+    {
+        return $this->totalAllyJungleMinionsKilled;
+    }
+
+    public function setTotalAllyJungleMinionsKilled($totalAllyJungleMinionsKilled): void
+    {
+        $this->totalAllyJungleMinionsKilled = $totalAllyJungleMinionsKilled;
+    }
+
+    public function getTotalEnemyJungleMinionsKilled(): ?int
+    {
+        return $this->totalEnemyJungleMinionsKilled;
+    }
+
+    public function setTotalEnemyJungleMinionsKilled($totalEnemyJungleMinionsKilled): void
+    {
+        $this->totalEnemyJungleMinionsKilled = $totalEnemyJungleMinionsKilled;
+    }
+
+    public function getPlacement(): ?int
+    {
+        return $this->placement;
+    }
+
+    public function setPlacement(?int $placement): void
+    {
+        $this->placement = $placement;
+    }
+
+    public function getPlayerAugment1(): ?int
+    {
+        return $this->playerAugment1;
+    }
+
+    public function setPlayerAugment1($playerAugment1): void
+    {
+        $this->playerAugment1 = $playerAugment1;
+    }
+
+    public function getPlayerAugment2(): ?int
+    {
+        return $this->playerAugment2;
+    }
+
+    public function setPlayerAugment2($playerAugment2): void
+    {
+        $this->playerAugment2 = $playerAugment2;
+    }
+
+    public function getPlayerAugment3(): ?int
+    {
+        return $this->playerAugment3;
+    }
+
+    public function setPlayerAugment3($playerAugment3): void
+    {
+        $this->playerAugment3 = $playerAugment3;
+    }
+
+    public function getPlayerAugment4(): ?int
+    {
+        return $this->playerAugment4;
+    }
+
+    public function setPlayerAugment4($playerAugment4): void
+    {
+        $this->playerAugment4 = $playerAugment4;
+    }
+
+    public function getPlayerAugment5(): ?int
+    {
+        return $this->playerAugment5;
+    }
+
+    public function setPlayerAugment5($playerAugment5): void
+    {
+        $this->playerAugment5 = $playerAugment5;
+    }
+
+    public function getPlayerAugment6(): ?int
+    {
+        return $this->playerAugment6;
+    }
+
+    public function setPlayerAugment6($playerAugment6): void
+    {
+        $this->playerAugment6 = $playerAugment6;
+    }
+
+    public function getPlayerSubteamId(): ?int
+    {
+        return $this->playerSubteamId;
+    }
+
+    public function setPlayerSubteamId($playerSubteamId): void
+    {
+        $this->playerSubteamId = $playerSubteamId;
+    }
+
+    public function getSubteamPlacement(): ?int
+    {
+        return $this->subteamPlacement;
+    }
+
+    public function setSubteamPlacement($subteamPlacement): void
+    {
+        $this->subteamPlacement = $subteamPlacement;
     }
 }

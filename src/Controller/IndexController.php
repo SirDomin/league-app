@@ -33,20 +33,19 @@ class IndexController extends AbstractController
 
         $platformName = strtolower($content['platformData']);
 
-        $summonerData = $this->leagueApi->login($content['summonerData']['displayName'], $platformName);
+        if ($content['summonerData']['displayName'] === '') {
+            $content['summonerData']['displayName'] = $content['summonerData']['gameName'];
+        }
+        $summonerData = $this->leagueApi->login($content['summonerData']['displayName'], $content['summonerData']['tagLine'], $platformName);
 
         if (isset($summonerData['status'])) {
             return new Response($serializer->serialize($summonerData, 'json'), Response::HTTP_UNAUTHORIZED);
         }
 
         if ($summonerData) {
-            if (
-                $summonerData['name'] === $content['summonerData']['displayName'] &&
-                $summonerData['profileIconId'] === $content['summonerData']['profileIconId']
-            ) {
                 $dataToSave = [
                     'server' => $platformName,
-                    'summonerName' => $summonerData['name'],
+                    'summonerName' => $summonerData['gameName'],
                     'puuid' => $summonerData['puuid'],
                 ];
 
@@ -54,7 +53,6 @@ class IndexController extends AbstractController
                     'token' => $this->leagueApi->encodeKey($dataToSave),
                     'puuid' => $summonerData['puuid'],
                 ], 'json'), Response::HTTP_OK);
-            }
         }
 
         return new Response($serializer->serialize([], 'json'), Response::HTTP_UNAUTHORIZED);

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\ApiManager\LeagueApi;
 use App\Entity\Participant;
 use App\Provider\GameProvider;
 use App\Provider\SummonerDataProvider;
@@ -22,6 +23,7 @@ class SummonerController extends AbstractController
         private readonly SummonerDataProvider $summonerDataProvider,
         private readonly GameProvider $gameProvider,
         private readonly ParticipantRepository $participantRepository,
+        private readonly LeagueApi $leagueApi,
     ){ }
 
     #[Route('/summoner/{summonerId}', name: 'summoner-show', methods: ['GET'])]
@@ -48,7 +50,7 @@ class SummonerController extends AbstractController
 
             $participantsData[] = [
                   'summonerId' => $summonerData['id'],
-                  'summonerName' => $summonerData['name'],
+                  'summonerName' => $summonerData['gameName'],
                   'puuid' => $summonerData['puuid'],
                   'teamId' => null,
                   'championId' => null,
@@ -68,31 +70,32 @@ class SummonerController extends AbstractController
 
         $participantsData = [];
 
-        if (strlen($playerName) < 3) {
-            return new Response($serializer->serialize(['info' => $this->gameProvider->connectParticipants(['participants' => $participantsData], null)], 'json'));
-        }
+//        if (strlen($playerName) < 3) {
+//            return new Response($serializer->serialize(['info' => $this->gameProvider->connectParticipants(['participants' => $participantsData], null)], 'json'));
+//        }
 
         $participants = $this->participantRepository
             ->createQueryBuilder('p')
             ->select('p.puuid,  p.summonerId')
             ->where('p.summonerName LIKE :name')
+            ->orWhere('p.riotIdGameName LIKE :name')
             ->setParameter('name', '%' . $playerName . '%')
             ->groupBy('p.puuid', 'p.summonerId')
             ->getQuery()
             ->getResult()
         ;
 
-        $participantsExact = $this->participantRepository
-            ->createQueryBuilder('p')
-            ->select('p.puuid,  p.summonerId')
-            ->where('p.summonerName = :name')
-            ->setParameter('name',  $playerName)
-            ->groupBy('p.puuid', 'p.summonerId')
-            ->getQuery()
-            ->getResult()
-        ;
+//        $participantsExact = $this->participantRepository
+//            ->createQueryBuilder('p')
+//            ->select('p.puuid,  p.summonerId')
+//            ->where('p.summonerName = :name')
+//            ->setParameter('name',  $playerName)
+//            ->groupBy('p.puuid', 'p.summonerId')
+//            ->getQuery()
+//            ->getResult()
+//        ;
 
-        $participants = array_merge($participants, $participantsExact);
+//        $participants = array_merge($participants, $participantsExact);
 
 //        return new Response($serializer->serialize(['info' => $participants], 'json'));
 
@@ -115,5 +118,37 @@ class SummonerController extends AbstractController
         $summonerUuid = $this->summonerDataProvider->getPuuidByName($summonerName);
 
         return new Response($serializer->serialize(['games' => $this->gameRepository->countAllGamesWithPlayer($summonerUuid)], 'json'));
+    }
+
+    #[Route('/summoner/{summonerName}/{tag}/count', name: 'summoner-tag-count', methods: ['GET'])]
+    public function countWithNameAndTag(string $summonerName, string $tag): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
+
+        return new Response($serializer->serialize(['games' => $this->gameRepository->countAllGamesWithPlayer($accountData['puuid'])], 'json'));
+    }
+
+    #[Route('/summoner/{summonerName}/{tag}/active', name: 'summoner-game-active', methods: ['GET'])]
+    public function getActiveGameForSummoner(string $summonerName, string $tag): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
+
+        return new Response($serializer->serialize($this->leagueApi->getCurrentGameForUser($accountData['puuid']), 'json'));
+    }
+
+
+
+    #[Route('/summoner/{summonerName}/{tag}/games', name: 'summoner-tag-games', methods: ['GET'])]
+    public function getGamesWithNameAndTag(string $summonerName, string $tag): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
+
+        return new Response($serializer->serialize(['games' => $this->gameRepository->getAllGamesWithPlayer($accountData['puuid'])], 'json'));
     }
 }

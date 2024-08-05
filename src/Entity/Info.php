@@ -106,6 +106,11 @@ class Info
     private $tournamentCode;
 
     /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $endOfGameResult;
+
+    /**
      * @return mixed
      */
     public function getId()
@@ -386,5 +391,21 @@ class Info
     {
         $this->participants[] = $participant;
         $participant->setInfo($this);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getEndOfGameResult()
+    {
+        return $this->endOfGameResult;
+    }
+
+    /**
+     * @param mixed $endOfGameResult
+     */
+    public function setEndOfGameResult($endOfGameResult): void
+    {
+        $this->endOfGameResult = $endOfGameResult;
     }
 }

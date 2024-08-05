@@ -201,10 +201,10 @@ class StatsRepository extends ServiceEntityRepository
                     ->setParameter('queueId', $queueId)
                 ;
         } else {
-            $sumOfWinsAndLosesQuery =
-                $sumOfWinsAndLosesQuery
-                    ->andWhere('gi.queueId IN (400, 420, 430, 440)')
-            ;
+//            $sumOfWinsAndLosesQuery =
+//                $sumOfWinsAndLosesQuery
+//                    ->andWhere('gi.queueId IN (400, 420, 430, 440)')
+//            ;
         }
 
         if ($season !== null) {

@@ -30,6 +30,11 @@ class Game
     private $metadata;
 
     /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    private $backfilled = false;
+
+    /**
      * @return mixed
      */
     public function getId()
@@ -65,7 +70,7 @@ class Game
     /**
      * @return mixed
      */
-    public function getMetadata()
+    public function getMetadata(): Metadata
     {
         return $this->metadata;
     }
@@ -77,5 +82,15 @@ class Game
     {
         $this->metadata = $metadata;
         $metadata->setGame($this);
+    }
+
+    public function isBackfilled(): bool
+    {
+        return $this->backfilled;
+    }
+
+    public function setBackfilled(bool $backfilled): void
+    {
+        $this->backfilled = $backfilled;
     }
 }
