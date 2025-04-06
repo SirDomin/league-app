@@ -98,6 +98,7 @@ class GameRepository extends ServiceEntityRepository
             ->addSelect('g.id')
             ->addSelect('g.backfilled')
             ->addSelect('i')
+            ->addSelect("i.gameCreation AS gameCreation")
             ->addSelect('m')
             ->leftJoin('g.info', 'i')
             ->leftJoin('g.metadata', 'm')
@@ -115,6 +116,8 @@ class GameRepository extends ServiceEntityRepository
                 if ($allyTeamFilterName === 'riotIdGameName') {
                     $qb->andWhere('sameTeamParticipants.' . $allyTeamFilterName . ' LIKE :' . $allyTeamFilterName)
                         ->setParameter($allyTeamFilterName, '%' . $filterData . '%');
+                    $qb->orWhere('sameTeamParticipants.summonerName LIKE :' . $allyTeamFilterName)
+                        ->setParameter($allyTeamFilterName, '%' . $filterData . '%');
                 } else {
                     $qb->andWhere('sameTeamParticipants.' . $allyTeamFilterName . ' = :allyTeam' . $allyTeamFilterName)
                         ->setParameter('allyTeam' . $allyTeamFilterName, $filterData);
@@ -129,6 +132,8 @@ class GameRepository extends ServiceEntityRepository
             foreach ($filters['enemyTeam'] as $enemyTeamFilterName => $filterData) {
                 if ($enemyTeamFilterName === 'riotIdGameName') {
                     $qb->andWhere('enemyTeamParticipants.' . $enemyTeamFilterName . ' LIKE :' . $enemyTeamFilterName)
+                        ->setParameter($enemyTeamFilterName, '%' . $filterData . '%');
+                    $qb->orWhere('enemyTeamParticipants.summonerName LIKE :' . $enemyTeamFilterName)
                         ->setParameter($enemyTeamFilterName, '%' . $filterData . '%');
                 } else {
                     $qb->andWhere('enemyTeamParticipants.' . $enemyTeamFilterName . ' = :enemyTeam' . $enemyTeamFilterName)
@@ -148,7 +153,6 @@ class GameRepository extends ServiceEntityRepository
                 ->setParameter($metadataFilterName, '%' . $filterData . '%');
         }
 
-
         if (isset($filters['info'])) {
             if (isset($filters['info']['season'])) {
                 $qb->andWhere('i.gameVersion LIKE :season')
@@ -163,11 +167,21 @@ class GameRepository extends ServiceEntityRepository
         $ids = [];
         $res = $qb->getQuery()->getResult();
 
+        /** @var Game $game */
         foreach ($res as $game) {
+            if (isset($filters['info']) && isset($filters['info']['dayOfWeek'])) {
+                $date = new \DateTime('@' . $game['gameCreation'] / 1000);
+
+                if ((int) $date->format('N') !== (int) $filters['info']['dayOfWeek']) {
+                    continue;
+                }
+            }
+
             $ids[] = $game['id'];
         }
 
         $minimizedGames = $this->getAllGamesMinimized($ids, $start, $limit);
+
 
         return $minimizedGames;
 

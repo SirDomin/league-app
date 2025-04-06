@@ -38,6 +38,7 @@ class GameProvider
 
     public function connectParticipants($data, $summonerId): array
     {
+        return [];
         $participants = [];
 
         if (!isset($data['participants'])) {
@@ -185,51 +186,47 @@ class GameProvider
 
     public function getGamesWithPlayer(string $summonerName): array
     {
-        $gamesFound = [];
-
-        $data = $this->leagueApi->getSummonerData('SirDomin');
-
-        for($x = 5; $x < 10; $x++) {
-            echo 'Game '. $x . '-' . $x * 100 . "\n";
-            $games = $this->leagueApi->getGamesHistory($summonerName, 100, $x * 100);
-
-            foreach ($games as $gameId) {
-                $gameInRepo = $this->gameRepository->findByMatchId($gameId);
-
-                if ($gameInRepo === null) {
-                    $gameInfo = $this->leagueApi->getGameById($gameId);
-                    usleep(1500000);
-                    dd($gameInfo);
-                    foreach($gameInfo['metadata']['participants'] as $participantUuid) {
-                        if ($participantUuid === $data['puuid']) {
-                            dd($gameInfo);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public function getLastGame(): ?Game
-    {
+//        $gamesFound = [];
+//
+//        $data = $this->leagueApi->getSummonerData('SirDomin');
+//
+//        for($x = 5; $x < 10; $x++) {
+//            echo 'Game '. $x . '-' . $x * 100 . "\n";
+//            $games = $this->leagueApi->getGamesHistory($summonerName, 100, $x * 100);
+//
+//            foreach ($games as $gameId) {
+//                $gameInRepo = $this->gameRepository->findByMatchId($gameId);
+//
+//                if ($gameInRepo === null) {
+//                    $gameInfo = $this->leagueApi->getGameById($gameId);
+//                    usleep(1500000);
+//                    dd($gameInfo);
+//                    foreach($gameInfo['metadata']['participants'] as $participantUuid) {
+//                        if ($participantUuid === $data['puuid']) {
+////                            dd($gameInfo);
+//                        }
+//                    }
+//                }
+//            }
+//        }
     }
 
     public function provideActiveGameForUser(string $summonerName = null, $summonerId, $clientData = null): ?array
     {
-        if ($summonerName) {
-            $gameData = $this->leagueApi->getCurrentGame($summonerName);
-        }
-
-        if ($clientData !== null) {
-            return $this->connectParticipants($clientData, $summonerId);
-        }
-
-        if ($gameData === null) {
-
-
-            return null;
-        }
-
-        return $this->connectParticipants($gameData, $summonerId);
+//        if ($summonerName) {
+//            $gameData = $this->leagueApi->getCurrentGame($summonerName);
+//        }
+//
+//        if ($clientData !== null) {
+//            return $this->connectParticipants($clientData, $summonerId);
+//        }
+//
+//        if ($gameData === null) {
+//
+//
+//            return null;
+//        }
+//
+//        return $this->connectParticipants($gameData, $summonerId);
     }
 }

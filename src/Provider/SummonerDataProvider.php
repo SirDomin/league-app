@@ -3,6 +3,7 @@
 namespace App\Provider;
 
 use App\ApiManager\LeagueApi;
+use App\Entity\Participant;
 
 class SummonerDataProvider
 {
@@ -25,5 +26,11 @@ class SummonerDataProvider
         $data = $this->leagueApi->getSummonerData($summonerName);
 
         return $data['puuid'];
+    }
+
+    public function getDataForParticipant(string $puuid): array
+    {
+        return $this->leagueApi->getAccountData($puuid);
+
     }
 }

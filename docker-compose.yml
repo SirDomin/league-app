@@ -34,7 +34,7 @@ services:
       SERVER_NAME: ${SERVER_NAME:-localhost, caddy:85}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      CADDY_EXTRA_CONFIG: "tls /etc/caddy/certs/tls.pem /etc/caddy/certs/tls.key"
+      CADDY_EXTRA_CONFIG: "tls /etc/caddy/certs/sirdomin.pl.certificate.pem /etc/caddy/certs/sirdomin.pl.key"
     restart: unless-stopped
     volumes:
       - php_socket:/var/run/php
@@ -49,11 +49,11 @@ services:
         protocol: tcp
       # HTTPS
       - target: 443
-        published: ${HTTPS_PORT:-443}
+        published: ${HTTPS_PORT:-8085}
         protocol: tcp
       # HTTP/3
       - target: 443
-        published: ${HTTP3_PORT:-443}
+        published: ${HTTPS_PORT:-8085}
         protocol: udp
 
 # Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service

@@ -696,6 +696,29 @@ class Participant
 
     private $score = 0;
 
+    private $individualBest = [];
+
+    private $comments = [];
+
+    public function getComments(): array
+    {
+        return $this->comments;
+    }
+
+    public function setComments(array $comments): void
+    {
+        $this->comments = $comments;
+    }
+
+    public function getIndividualBest(): array
+    {
+        return $this->individualBest;
+    }
+
+    public function setIndividualBest(array $individualBest): void
+    {
+        $this->individualBest = $individualBest;
+    }
 
     public function getScore(): int
     {

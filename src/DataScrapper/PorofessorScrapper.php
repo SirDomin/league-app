@@ -10,10 +10,10 @@ class PorofessorScrapper
 {
     public function __construct() {}
 
-    public function getActiveData(string $summonerName): ?array
+    public function getActiveData(string $summonerName, string $server = 'eune'): ?array
     {
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, \sprintf('https://porofessor.gg/partial/live-partial/eune/%s', $summonerName));
+        curl_setopt($ch, CURLOPT_URL, \sprintf('https://porofessor.gg/partial/live-partial/%s/%s', $server, $summonerName));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
 

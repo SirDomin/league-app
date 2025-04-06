@@ -791,7 +791,7 @@ class Challenge
     /**
      * @return mixed
      */
-    public function getBountyGold()
+    public function getBountyGold(): int
     {
         return $this->bountyGold;
     }
@@ -799,7 +799,7 @@ class Challenge
     /**
      * @param mixed $bountyGold
      */
-    public function setBountyGold($bountyGold): void
+    public function setBountyGold(int $bountyGold): void
     {
         $this->bountyGold = $bountyGold;
     }

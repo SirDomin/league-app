@@ -33,10 +33,10 @@ class IndexController extends AbstractController
 
         $platformName = strtolower($content['platformData']);
 
-        if ($content['summonerData']['displayName'] === '') {
-            $content['summonerData']['displayName'] = $content['summonerData']['gameName'];
+        if ($content['summonerData']['gameName'] === '') {
+            $content['summonerData']['gameName'] = $content['summonerData']['displayName'];
         }
-        $summonerData = $this->leagueApi->login($content['summonerData']['displayName'], $content['summonerData']['tagLine'], $platformName);
+        $summonerData = $this->leagueApi->login($content['summonerData']['gameName'], $content['summonerData']['tagLine'], $platformName);
 
         if (isset($summonerData['status'])) {
             return new Response($serializer->serialize($summonerData, 'json'), Response::HTTP_UNAUTHORIZED);

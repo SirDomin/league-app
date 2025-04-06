@@ -29,7 +29,7 @@ class LeagueApi
         $this->cypherMethod = 'AES-256-CBC';
         $this->iv = base64_decode($_ENV['APP_IV']);
 
-        $this->serverName = null;
+        $this->serverName = 'eun1';
     }
 
     public function setServer(string $server) {

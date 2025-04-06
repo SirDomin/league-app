@@ -16,7 +16,11 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Entity'
                 prefix: 'App\Entity'
                 alias: App
-
+        dql:
+            string_functions:
+                from_unixtime: App\Doctrine\FromUnixtime
+            numeric_functions:
+                extract: App\Doctrine\Extract
 when@test:
     doctrine:
         dbal:

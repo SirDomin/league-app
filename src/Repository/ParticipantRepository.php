@@ -25,4 +25,15 @@ class ParticipantRepository extends ServiceEntityRepository
             return $item[$fieldName];
         }, $result);
     }
+
+    public function getAllComments(string $puuid): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->select('p.comment')
+            ->where('p.puuid = :puuid')
+            ->setParameter('puuid', $puuid)
+        ;
+
+        return $qb->getQuery()->getResult();
+    }
 }

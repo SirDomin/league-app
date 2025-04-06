@@ -8,3 +8,5 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
+/docker/caddy/certs/sirdomin.pl.certificate.pem
+/docker/caddy/certs/sirdomin.pl.key
