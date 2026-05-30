@@ -8,19 +8,37 @@ use App\Entity\Participant;
 class ScoreCalculator
 {
     private array $weights = [
-        'Kills' => 0.2,
-        'Deaths' => -0.1,
-        'Assists' => 0.15,
-        'TotalDamageDealtToChampions' => 0.2,
-        'TotalDamageTaken' => 0.1,
-        'TotalHeal' => 0.05,
-        'GoldEarned' => 0.1,
-        'ChampLevel' => 0.05,
-        'VisionScore' => 0.05,
-        'DamageDealtToBuildings' => 0.05,
+        'Kills' => 6,
+        'Deaths' => -8,
+        'Assists' => 4,
+        'GoldEarned' => 8,
+        'ChampLevel' => 4,
+        'TotalDamageDealtToChampions' => 6,
+        'VisionScore' => 3,
+        'DamageDealtToBuildings' => 3,
     ];
 
     private array $challengeWeights = [
+        'EarlyLaningPhaseGoldExpAdvantage' => 3,
+        'MaxCsAdvantageOnLaneOpponent' => 0.1,
+        'MaxLevelLeadLaneOpponent' => 2,
+        'KillParticipation' => 5,
+        'TeamDamagePercentage' => 10,
+        'TurretPlatesTaken' => 1,
+        'TakedownOnFirstTurret' => 2,
+    ];
+
+    private array $challengeCaps = [
+        'EarlyLaningPhaseGoldExpAdvantage' => 3,
+        'MaxCsAdvantageOnLaneOpponent' => 3,
+        'MaxLevelLeadLaneOpponent' => 4,
+        'KillParticipation' => 5,
+        'TeamDamagePercentage' => 10,
+        'TurretPlatesTaken' => 5,
+        'TakedownOnFirstTurret' => 2,
+    ];
+
+    private array $individualBestWeights = [
         'DamageTakenOnTeamPercentage' => 25,
         'KillParticipation' => 10,
         'SkillshotsDodged' => 0.05,
@@ -53,23 +71,11 @@ class ScoreCalculator
         'WardsGuarded' => 1
     ];
 
-    private array $roleOrder = [
-        'TOP' => 1,
-        'JUNGLE' => 2,
-        'MID' => 3,
-        'BOTTOM' => 4,
-        'UTILITY' => 5
-    ];
-
     private array $junglerChallenges = [
         'BuffsStolen' => 0.5,
-//        'JungleCSBefore10Minutes' => 0.25,
     ];
 
-    public function __construct()
-    {
-
-    }
+    private const MAX_CHALLENGE_BONUS = 15;
 
     private function toSnakeCase(array $array): array
     {
@@ -107,12 +113,11 @@ class ScoreCalculator
         }
 
         $individualBest = [];
-        $rawScores = [];
-
         /** @var Participant $participant */
         foreach ($participantsArray as $participant) {
             $participant->setScore(0);
-            $score = 0.0;
+            $score = 50.0;
+            $challengeBonus = 0.0;
             $individualBest[$participant->getPuuid()] = [];
 
             foreach ($this->weights as $metric => $weight) {
@@ -121,13 +126,10 @@ class ScoreCalculator
                 if (method_exists($participant, $getterMethod)) {
                     $value = $participant->$getterMethod();
 
-                    $metricValues = array_map(function($p) use ($getterMethod, $participant) {
+                    $opponentValues = array_map(function($p) use ($getterMethod, $participant) {
                         if (
-                            $p === $participant
-                            || (
-                                $p->getTeamId() !== $participant->getTeamId()
-                                && $this->getPositionKey($p) === $this->getPositionKey($participant)
-                            )
+                            $p->getTeamId() !== $participant->getTeamId()
+                            && $this->getPositionKey($p) === $this->getPositionKey($participant)
                         ) {
                             return $p->$getterMethod();
                         }
@@ -135,23 +137,18 @@ class ScoreCalculator
                         return null;
                     }, $participantsArray);
 
-                    $metricValues = array_filter($metricValues, function($value) {
+                    $opponentValues = array_filter($opponentValues, function($value) {
                         return $value !== null;
                     });
 
-                    $maxValue = max($metricValues);
-                    $minValue = min($metricValues);
-                    $range = $maxValue - $minValue;
-
-                    if ($range == 0) {
-                        $normalizedValue = 0.5;
-                    } else {
-                        $normalizedValue = ($value - $minValue) / $range;
+                    if ($opponentValues === []) {
+                        continue;
                     }
 
-                    $normalizedValue = $normalizedValue * 100;
+                    $opponentValue = array_sum($opponentValues) / count($opponentValues);
+                    $advantage = ($value - $opponentValue) / max(abs($value), abs($opponentValue), 1);
 
-                    $score += $normalizedValue * $weight;
+                    $score += $advantage * $weight;
                 }
             }
 
@@ -162,11 +159,14 @@ class ScoreCalculator
                     $getterMethod = 'get' . $metric;
                     if (method_exists($challenge, $getterMethod)) {
                         $value = $challenge->$getterMethod();
-                        if ($this->metricCalculate($metric)) {
-                            $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = ($value * $weight);
-                        }
+                        $challengeBonus += min($this->challengeCaps[$metric], max(0, $value * $weight));
+                    }
+                }
 
-                        $score += $value * $weight;
+                foreach ($this->individualBestWeights as $metric => $weight) {
+                    $getterMethod = 'get' . $metric;
+                    if (method_exists($challenge, $getterMethod) && $this->metricCalculate($metric)) {
+                        $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = $challenge->$getterMethod() * $weight;
                     }
                 }
 
@@ -179,35 +179,15 @@ class ScoreCalculator
                                 $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = ($value * $weight);
                             }
 
-                            $score += $value * $weight;
+                            $challengeBonus += min(2, max(0, $value * $weight));
                         }
                     }
                 }
             }
 
-            $rawScores[$participant->getPuuid()] = max(0, $score);
+            $score += min(self::MAX_CHALLENGE_BONUS, $challengeBonus);
+            $participant->setScore((int) round(max(0, min(100, $score))));
             $participant->setIndividualBest($individualBest[$participant->getPuuid()]);
-        }
-
-        $positionScores = [];
-        $positionCounts = [];
-        foreach ($participantsArray as $participant) {
-            $position = $this->getPositionKey($participant);
-            $positionScores[$position] = ($positionScores[$position] ?? 0) + $rawScores[$participant->getPuuid()];
-            $positionCounts[$position] = ($positionCounts[$position] ?? 0) + 1;
-        }
-
-        foreach ($participantsArray as $participant) {
-            $position = $this->getPositionKey($participant);
-            $positionScore = $positionScores[$position];
-            if ($positionCounts[$position] === 1) {
-                $scaledScore = $rawScores[$participant->getPuuid()];
-            } else if ($positionScore == 0) {
-                $scaledScore = 100 / $positionCounts[$position];
-            } else {
-                $scaledScore = ($rawScores[$participant->getPuuid()] / $positionScore) * 100;
-            }
-            $participant->setScore(round($scaledScore));
         }
 
         /** @var Participant $participant */
@@ -246,16 +226,16 @@ class ScoreCalculator
         $badScores = 3;
 
         $score = $participant->getScore();
-        if ($score < 10) {
+        if ($score < 35) {
             $goodScores = 1;
             $badScores = 5;
-        } else if ($score > 30) {
+        } else if ($score > 65) {
             $goodScores = 5;
             $badScores = 1;
-        } else if ($score < 15) {
+        } else if ($score < 45) {
             $goodScores = 2;
             $badScores = 4;
-        } else if ($score > 25) {
+        } else if ($score > 55) {
             $goodScores = 4;
             $badScores = 2;
         }
