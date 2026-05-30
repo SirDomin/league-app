@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Analyzer\PlayerAnalyzer;
 use App\ApiManager\LeagueApi;
 use App\Calculator\ScoreCalculator;
 use App\DataScrapper\PorofessorScrapper;
@@ -14,6 +15,7 @@ use App\Provider\SummonerDataProvider;
 use App\Repository\ClipRepository;
 use App\Repository\GameRepository;
 use App\Repository\ParticipantRepository;
+use App\Repository\StatsRepository;
 use App\Utils\GameBackfiller;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializerBuilder;
@@ -38,6 +40,8 @@ class GameController extends AbstractController
         private readonly GameBackfiller $gameBackfiller,
         private readonly ScoreCalculator $scoreCalculator,
         private readonly FilterProvider $filterProvider,
+        private readonly StatsRepository $statsRepository,
+        private readonly PlayerAnalyzer $playerAnalyzer,
     ) { }
 
     #[Route('/game/active-data/{region}', name: 'game')]
@@ -305,17 +309,21 @@ class GameController extends AbstractController
     #[Route('/test', name: 'test')]
     public function test(Request $request): Response
     {
-        $data = $request->getSession()->get('data');
-
         $serializer = SerializerBuilder::create()->build();
 
-        return new Response($serializer->serialize(['filters' => $this->filterProvider->getAllFilters()], 'json'));
+        return new Response($serializer->serialize(['filters' => 'test'], 'json'));
     }
 
     #[Route('/test2', name: 'test2')]
     public function test2(Request $request): Response
     {
 
+//        $playerData = $this->playerAnalyzer->analyze('SirDomin', 'Domin');
+        $playerData = $this->playerAnalyzer->analyze('Blam','EUNE');
+        die(json_encode($playerData));
+        dd($playerData);
+
+        dd('xd');
         $games = $this->gameRepository->getGamesToBackfill();
 
         $backfilled = 0;

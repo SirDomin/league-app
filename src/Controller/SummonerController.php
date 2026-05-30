@@ -2,10 +2,12 @@
 
 namespace App\Controller;
 
+use App\Analyzer\PlayerAnalyzer;
 use App\ApiManager\LeagueApi;
 use App\Calculator\ScoreCalculator;
 use App\Entity\Game;
 use App\Entity\Participant;
+use App\Exception\ApiRateExceededException;
 use App\Provider\GameProvider;
 use App\Provider\SummonerDataProvider;
 use App\Repository\GameRepository;
@@ -31,6 +33,7 @@ class SummonerController extends AbstractController
         private readonly ParticipantRepository $participantRepository,
         private readonly LeagueApi $leagueApi,
         private readonly ScoreCalculator $scoreCalculator,
+        private readonly PlayerAnalyzer $playerAnalyzer,
     ){ }
 
     #[Route('/summoner/{summonerId}', name: 'summoner-show', methods: ['GET'])]
@@ -144,6 +147,21 @@ class SummonerController extends AbstractController
         $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
 
         return new Response($serializer->serialize(['games' => $this->gameRepository->countAllGamesWithPlayer($accountData['puuid'])], 'json'));
+    }
+
+    #[Route('/summoner/{summonerName}/{tag}/analyze', name: 'summoner-analyze', methods: ['GET'])]
+    public function analyzePlayer(string $summonerName, string $tag): Response
+    {
+        $serializer = SerializerBuilder::create()->build();
+
+        try {
+            $playerData = $this->playerAnalyzer->analyze($summonerName, $tag);
+
+        } catch (ApiRateExceededException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], 429);
+        }
+
+        return new Response($serializer->serialize($playerData, 'json'));
     }
 
     #[Route('/summoner/{summonerName}/{tag}/active', name: 'summoner-game-active', methods: ['GET'])]

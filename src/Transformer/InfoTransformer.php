@@ -17,7 +17,14 @@ class InfoTransformer
                 }
                 continue;
             }
-            $info->{'set'.$key}($infoData);
+
+            if (method_exists($info, 'set'.$key)) {
+                $info->{'set'.$key}($infoData);
+
+            } else {
+                $invalidFields[] = [$key => $infoData];
+            }
+
         }
 
         return $info;

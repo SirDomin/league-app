@@ -12,7 +12,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-// the name of the command is what users type after "php bin/console"
 #[AsCommand(name: 'app:fetch-games')]
 class FetchPastGamesCommand extends Command
 {

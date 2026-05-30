@@ -116,7 +116,7 @@ class GameProvider
         return $participants;
     }
 
-    public function provideGameByMatchId(string $matchId): ?Game
+    public function provideGameByMatchId(string $matchId): Game|array
     {
         $game = $this->gameRepository->findByMatchId($matchId);
 
@@ -125,6 +125,11 @@ class GameProvider
         }
 
         return $this->parseGame($this->leagueApi->getGameById($matchId));
+    }
+
+    public function provideGameForRegionByMatchId(string $matchId, string $region): Game|array
+    {
+        return $this->parseGame($this->leagueApi->getMatch($matchId, $region));
     }
 
 

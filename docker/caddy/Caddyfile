@@ -1,5 +1,4 @@
 {
-    # Debug
     {$CADDY_DEBUG}
 }
 
@@ -11,18 +10,13 @@ log
 
 route {
     root * /srv/app/public
+
     mercure {
-        # Transport to use (default to Bolt)
         transport_url {$MERCURE_TRANSPORT_URL:bolt:///data/mercure.db}
-        # Publisher JWT key
         publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
-        # Subscriber JWT key
         subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG}
-        # Allow anonymous subscribers (double-check that it's what you want)
         anonymous
-        # Enable the subscription API (double-check that it's what you want)
         subscriptions
-        # Extra directives
         cert_duration 10000h
         {$MERCURE_EXTRA_DIRECTIVES}
         tls self_signed
@@ -30,9 +24,10 @@ route {
             experimental_http3
         }
     }
+
     vulcain
+
     php_fastcgi unix//var/run/php/php-fpm.sock
     encode zstd gzip
     file_server
 }
-

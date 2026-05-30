@@ -36,7 +36,7 @@ class StatsController extends AbstractController
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
-        return new JsonResponse($this->statsRepository->getWinratioForAllChampions($summonerData['id']));
+        return new JsonResponse($this->statsRepository->getWinratioForAllChampions($summonerData['puuid']));
     }
 
     #[Route('/stats', name: 'stats-all-post', methods: ['POST'])]
@@ -48,11 +48,11 @@ class StatsController extends AbstractController
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
         if ($filters['queueId'] === null && $filters['season'] === null) {
-            return new JsonResponse($this->statsRepository->getWinratioForAllChampions($summonerData['id']));
+            return new JsonResponse($this->statsRepository->getWinratioForAllChampions($summonerData['puuid']));
         }
 
         return new JsonResponse(
-            $this->statsRepository->getWinratioForAllChampions($summonerData['id'], $filters['queueId'], $filters['season'])
+            $this->statsRepository->getWinratioForAllChampions($summonerData['puuid'], $filters['queueId'], $filters['season'])
         );
     }
 
@@ -64,8 +64,8 @@ class StatsController extends AbstractController
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
         return new JsonResponse([
-            'queues' => $this->statsRepository->getAvailableQueues($summonerData['id']),
-            'seasons' => $this->statsRepository->getAvailableSeasons($summonerData['id']),
+            'queues' => $this->statsRepository->getAvailableQueues($summonerData['puuid']),
+            'seasons' => $this->statsRepository->getAvailableSeasons($summonerData['puuid']),
         ]);
     }
 
@@ -76,7 +76,7 @@ class StatsController extends AbstractController
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
 
-        return new JsonResponse($this->statsRepository->getInfoAboutChampion($summonerData['id'], $queueId, $championId, $position, $season));
+        return new JsonResponse($this->statsRepository->getInfoAboutChampion($summonerData['puuid'], $queueId, $championId, $position, $season));
     }
 
      #[Route('/stats/by-queue/{queueId}', name: 'stats-by-queue')]

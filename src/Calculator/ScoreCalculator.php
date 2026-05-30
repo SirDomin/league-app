@@ -99,7 +99,13 @@ class ScoreCalculator
     {
         $participants = $game->getInfo()->getParticipants();
 
-        $participantsArray = $participants->toArray();
+        try {
+            $participantsArray = $participants->toArray();
+
+        } catch (\Throwable $exception) {
+            $participantsArray = $participants;
+        }
+
         $individualBest = [];
 
         /** @var Participant $participant */

@@ -21,6 +21,10 @@ class TokenCheckListener
 
         $requestUri = $request->getRequestUri();
 
+        if (str_contains($requestUri, 'lolanal')) {
+            return;
+        }
+
         if ($requestUri === '/login' || str_contains($requestUri, 'test')) {
             return;
         }
@@ -39,6 +43,7 @@ class TokenCheckListener
         $session->set('data', $deserialized);
 
         $this->leagueApi->setServer($deserialized['server']);
+
         $request->setSession($session);
     }
 

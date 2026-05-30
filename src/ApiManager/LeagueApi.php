@@ -2,6 +2,8 @@
 
 namespace App\ApiManager;
 
+use App\Exception\ApiRateExceededException;
+use App\Utils\RegionMatcher;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -77,7 +79,7 @@ class LeagueApi
         );
 
         if ($response->getStatusCode() === 429) {
-            throw new \Exception('API Rate exceeded');
+            throw new ApiRateExceededException();
         }
 
         if ($response->getStatusCode() === 200) {
@@ -102,21 +104,28 @@ class LeagueApi
         return $this->getRequest($url);
     }
 
-    public function login(string $summonerName, string $tag, string $serverName): array
+    public function login(string $summonerName, string $tag, string $region): array
     {
-        $url = 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/' . $summonerName . '/' . $tag;
+        $serverName = RegionMatcher::matchRegionToServer($region);
+
+        $url = 'https://'. $serverName .'.api.riotgames.com/riot/account/v1/accounts/by-riot-id/' . $summonerName . '/' . $tag;
         $data = $this->getRequest($url);
 
         return array_merge($data, $this->getAccountData($data['puuid']));
     }
 
-    public function getSummonerDataByPuuid(string $puuid): array
+    public function getSummonerDataByPuuid(string $puuid, bool $cache = true, ?string $server = null): array
     {
-        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
+        if ($server === null) {
+            $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
+        } else {
+            $url = 'https://' . strtolower($server) . '.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' . $puuid;
 
-        $data = $this->getRequest($url);
+        }
 
-        return array_merge($data, $this->getAccountData($puuid));
+        $data = $this->getRequest($url, $cache);
+
+        return array_merge($data, $this->getAccountData($puuid, $cache));
     }
 
     public function getChampionMasteryByChampionId(string $puuid, int $championId): array
@@ -126,11 +135,11 @@ class LeagueApi
         return $this->getRequest($url, true, 36000);
     }
 
-    public function getAccountData(string $puuid): array
+    public function getAccountData(string $puuid, bool $cache = true): array
     {
         $url = 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/' . $puuid;
 
-        return $this->getRequest($url);
+        return $this->getRequest($url, $cache);
     }
 
     public function getAccountDataByRiotId(string $gameName, string $gameTag): array
@@ -208,4 +217,58 @@ class LeagueApi
         return $sanitized;
     }
 
+    public function getAccountByRiotId(string $name, string $tag)
+    {
+        return $this->getRequest("https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/$name/$tag");
+    }
+
+    public function getSummonerByPuuid(string $puuid, string $region)
+    {
+        return $this->getRequest("https://$region.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/$puuid");
+    }
+
+    public function getRankedStats(string $puuid, $region)
+    {
+        return $this->getRequest("https://$region.api.riotgames.com/lol/league/v4/entries/by-puuid/$puuid");
+    }
+
+    public function getRankedMatchIds(string $puuid, int $count, string $region)
+    {
+        $server = RegionMatcher::matchRegionToServer($region);
+
+        return $this->getRequest("https://$server.api.riotgames.com/lol/match/v5/matches/by-puuid/$puuid/ids?type=ranked&count=$count");
+    }
+
+    public function getMatch(string $matchId, string $region)
+    {
+        $server = RegionMatcher::matchRegionToServer($region);
+
+        return $this->getRequest("https://$server.api.riotgames.com/lol/match/v5/matches/$matchId");
+    }
+
+    public function getGamesHistoryByDate(string $puuid, string $region, \DateTime $startTime, \DateTime $endTime, $limit = 10): array
+    {
+        $server = RegionMatcher::matchRegionToServer($region);
+
+        $baseUrl = 'https://' . $server . '.api.riotgames.com/lol/match/v5/matches/by-puuid/' . $puuid . '/ids';
+
+        $query = http_build_query([
+            'startTime' => $startTime->getTimestamp(),
+            'endTime'   => $endTime->getTimestamp(),
+            'count'     => (int) $limit,
+        ]);
+
+        $url = $baseUrl . '?' . $query;
+
+        $response = $this->getRequest($url, true, 60);
+
+        return $response;
+    }
+
+    public function getSummonerLeaguesForServer(string $puuid, string $region): array
+    {
+        $url = \sprintf('https://' . $region . '.api.riotgames.com/lol/league/v4/entries/by-puuid/%s', $puuid);
+
+        return $this->getRequest($url);
+    }
 }

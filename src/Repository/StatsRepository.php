@@ -138,27 +138,75 @@ class StatsRepository extends ServiceEntityRepository
         ];
     }
 
-    public function getAvailableQueues(string $summonerId): array
+    public function getWinratioForTeamComp($puuid, array $championIds = []): array
+    {
+        $sumOfWinsQuery =  $this->createQueryBuilder('g')
+            ->select('COUNT(DISTINCT g.id) as count')
+            ->leftJoin('g.info', 'gi')
+            ->leftJoin('gi.participants', 'p')
+            ->leftJoin('gi.participants', 'teammate') // join again to check full team
+            ->where('p.puuid = :puuid')
+            ->andWhere('gi.queueId = 420')
+            ->andWhere('p.teamId = teammate.teamId') // only same-team champions
+            ->andWhere('teammate.championId IN (:championIds)')
+            ->andWhere('p.win = true')
+            ->setParameter('puuid', $puuid)
+            ->setParameter('championIds', $championIds)
+            ->getQuery();
+        ;
+
+        $sumOfWinsQuery = $sumOfWinsQuery->getResult();
+
+        dd($sumOfWinsQuery);
+        $sumOfLosesQuery = $this->createQueryBuilder('g')
+            ->leftJoin('g.info', 'gi')
+            ->leftJoin('gi.participants', 'p')
+            ->andWhere('p.championId IN (:championIds)')
+            ->andWhere('p.puuid = :puuid')
+            ->andWhere('p.win = false')
+            ->andWhere('gi.queueId = 420')
+            ->setParameter('puuid', $puuid)
+            ->setParameter('championIds', $championIds)
+            ->getQuery()
+        ;
+
+        $sumOfLosesQuery = $sumOfLosesQuery->getQuery()->getResult();
+
+        $sumOfWins = $sumOfWinsQuery[0]['count'] ?? 0;
+        $sumOfLoses = $sumOfLosesQuery[0]['count'] ?? 0;
+
+        $totalGames = $sumOfWins + $sumOfLoses;
+
+        $winRate = ($totalGames != 0) ? round(($sumOfWins / $totalGames) * 100, 2) : 0;
+
+        return [
+            'wins' => $sumOfWinsQuery[0]['count'],
+            'loses' => $sumOfLosesQuery[0]['count'],
+            'wr' => $winRate
+        ];
+    }
+
+    public function getAvailableQueues(string $puuid): array
     {
         $queues = $this->createQueryBuilder('g')
             ->select('DISTINCT gi.queueId')
             ->leftJoin('g.info', 'gi')
             ->leftJoin('gi.participants', 'p')
-            ->where('p.summonerId = :summonerId')
-            ->setParameter('summonerId', $summonerId)
+            ->where('p.puuid = :puuid')
+            ->setParameter('puuid', $puuid)
         ;
 
         return $queues->getQuery()->getResult();
     }
 
-    public function getAvailableSeasons(string $summonerId): array
+    public function getAvailableSeasons(string $puuid): array
     {
         $seasons = $this->createQueryBuilder('g')
             ->select('gi.gameVersion')
             ->leftJoin('g.info', 'gi')
             ->leftJoin('gi.participants', 'p')
-            ->where('p.summonerId = :summonerId')
-            ->setParameter('summonerId', $summonerId)
+            ->where('p.puuid = :puuid')
+            ->setParameter('puuid', $puuid)
             ->groupBy('gi.gameVersion')
             ->getQuery()
             ->getResult()
@@ -176,7 +224,7 @@ class StatsRepository extends ServiceEntityRepository
         return $uniqueSeasons;
     }
 
-    public function getWinratioForAllChampions($summonerId, ?int $queueId = null, ?int $season = null): array
+    public function getWinratioForAllChampions($puuid, ?int $queueId = null, ?int $season = null): array
     {
         $sumOfWinsAndLosesQuery = $this->createQueryBuilder('g')
             ->select('p.championId as championId,
@@ -187,11 +235,11 @@ class StatsRepository extends ServiceEntityRepository
             ->addSelect('p.championName')
             ->leftJoin('g.info', 'gi')
             ->leftJoin('gi.participants', 'p')
-            ->andWhere('p.summonerId = :summonerId')
+            ->andWhere('p.puuid = :puuid')
             ->groupBy('p.championId')
             ->addGroupBy('p.championName')
             ->addGroupBy('p.championName')
-            ->setParameter('summonerId', $summonerId)
+            ->setParameter('puuid', $puuid)
         ;
 
         if ($queueId !== null) {
@@ -224,7 +272,7 @@ class StatsRepository extends ServiceEntityRepository
         return $results;
     }
 
-    public function getInfoAboutChampion($summonerId, int $queueId, int $championId, string $position, int $season = 0): array
+    public function getInfoAboutChampion($puuid, int $queueId, int $championId, string $position, int $season = 0): array
     {
         $query =
             $this->createQueryBuilder('g')
@@ -237,18 +285,18 @@ class StatsRepository extends ServiceEntityRepository
                 ->leftJoin('g.info', 'i')
                 ->leftJoin('i.participants', 'participant')
                 ->where('i.queueId = :queueId')
-                ->andWhere('participant.summonerId != :summonerId')
+                ->andWhere('participant.puuid != :puuid')
                 ->andWhere('participant.teamId != (
                     SELECT p.teamId
                     FROM ' . Participant::class . ' p
                     WHERE p.info = i
-                    AND p.summonerId = :summonerId
+                    AND p.puuid = :puuid
                     AND p.championId = :championId
                 )')
                 ->groupBy('participant.championId')
                 ->addGroupBy('participant.championName')
                 ->setParameter('queueId', $queueId)
-                ->setParameter('summonerId', $summonerId)
+                ->setParameter('puuid', $puuid)
                 ->setParameter('championId', $championId)
             ;
 
@@ -258,7 +306,7 @@ class StatsRepository extends ServiceEntityRepository
                     SELECT pp.individualPosition
                     FROM ' . Participant::class . ' pp
                     WHERE pp.info = i
-                    AND pp.summonerId = :summonerId
+                    AND pp.puuid = :puuid
                     AND pp.championId = :championId
                 )');
         }

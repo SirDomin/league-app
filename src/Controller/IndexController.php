@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\ApiManager\LeagueApi;
+use App\Utils\RegionMatcher;
 use JMS\Serializer\SerializerBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -31,7 +32,7 @@ class IndexController extends AbstractController
 
         $content = json_decode($request->getContent(), true);
 
-        $platformName = strtolower($content['platformData']);
+        $platformName = strtolower(RegionMatcher::regionToPlatform($content['localeData']['region']));
 
         if ($content['summonerData']['gameName'] === '') {
             $content['summonerData']['gameName'] = $content['summonerData']['displayName'];
