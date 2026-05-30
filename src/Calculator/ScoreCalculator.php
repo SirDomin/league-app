@@ -107,22 +107,28 @@ class ScoreCalculator
         }
 
         $individualBest = [];
+        $rawScores = [];
 
         /** @var Participant $participant */
         foreach ($participantsArray as $participant) {
             $participant->setScore(0);
+            $score = 0.0;
+            $individualBest[$participant->getPuuid()] = [];
 
             foreach ($this->weights as $metric => $weight) {
                 $getterMethod = 'get' . $metric;
-                if (!isset($individualBest[$participant->getPuuid()])) {
-                    $individualBest[$participant->getPuuid()] = [];
-                }
 
                 if (method_exists($participant, $getterMethod)) {
                     $value = $participant->$getterMethod();
 
                     $metricValues = array_map(function($p) use ($getterMethod, $participant) {
-                        if ($p->getTeamId() === $participant->getTeamId()) {
+                        if (
+                            $p === $participant
+                            || (
+                                $p->getTeamId() !== $participant->getTeamId()
+                                && $this->getPositionKey($p) === $this->getPositionKey($participant)
+                            )
+                        ) {
                             return $p->$getterMethod();
                         }
 
@@ -138,14 +144,14 @@ class ScoreCalculator
                     $range = $maxValue - $minValue;
 
                     if ($range == 0) {
-                        $normalizedValue = 1;
+                        $normalizedValue = 0.5;
                     } else {
                         $normalizedValue = ($value - $minValue) / $range;
                     }
 
                     $normalizedValue = $normalizedValue * 100;
 
-                    $participant->setScore($participant->getScore() + ($normalizedValue * $weight));
+                    $score += $normalizedValue * $weight;
                 }
             }
 
@@ -160,7 +166,7 @@ class ScoreCalculator
                             $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = ($value * $weight);
                         }
 
-                        $participant->setScore($participant->getScore() + ($value * $weight));
+                        $score += $value * $weight;
                     }
                 }
 
@@ -173,32 +179,33 @@ class ScoreCalculator
                                 $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = ($value * $weight);
                             }
 
-                            $participant->setScore($participant->getScore() + ($value * $weight));
+                            $score += $value * $weight;
                         }
                     }
                 }
             }
 
-
+            $rawScores[$participant->getPuuid()] = max(0, $score);
             $participant->setIndividualBest($individualBest[$participant->getPuuid()]);
         }
 
-        $teamScores = [];
+        $positionScores = [];
+        $positionCounts = [];
         foreach ($participantsArray as $participant) {
-            $teamId = $participant->getTeamId();
-            if (!isset($teamScores[$teamId])) {
-                $teamScores[$teamId] = 0;
-            }
-            $teamScores[$teamId] += $participant->getScore();
+            $position = $this->getPositionKey($participant);
+            $positionScores[$position] = ($positionScores[$position] ?? 0) + $rawScores[$participant->getPuuid()];
+            $positionCounts[$position] = ($positionCounts[$position] ?? 0) + 1;
         }
 
         foreach ($participantsArray as $participant) {
-            $teamId = $participant->getTeamId();
-            $teamScore = $teamScores[$teamId];
-            if ($teamScore == 0) {
-                $scaledScore = 0;
+            $position = $this->getPositionKey($participant);
+            $positionScore = $positionScores[$position];
+            if ($positionCounts[$position] === 1) {
+                $scaledScore = $rawScores[$participant->getPuuid()];
+            } else if ($positionScore == 0) {
+                $scaledScore = 100 / $positionCounts[$position];
             } else {
-                $scaledScore = ($participant->getScore() / $teamScore) * 100;
+                $scaledScore = ($rawScores[$participant->getPuuid()] / $positionScore) * 100;
             }
             $participant->setScore(round($scaledScore));
         }
@@ -209,6 +216,13 @@ class ScoreCalculator
         }
 
         return $game;
+    }
+
+    private function getPositionKey(Participant $participant): string
+    {
+        return $participant->getIndividualPosition()
+            ?: $participant->getTeamPosition()
+            ?: 'UNASSIGNED:' . $participant->getPuuid();
     }
 
     private function metricCalculate(string $metric): bool
