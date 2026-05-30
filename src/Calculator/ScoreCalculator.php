@@ -4,6 +4,7 @@ namespace App\Calculator;
 
 use App\Entity\Game;
 use App\Entity\Participant;
+use App\Repository\ParticipantRepository;
 
 class ScoreCalculator
 {
@@ -38,37 +39,37 @@ class ScoreCalculator
         'TakedownOnFirstTurret' => 2,
     ];
 
-    private array $individualBestWeights = [
-        'DamageTakenOnTeamPercentage' => 25,
-        'KillParticipation' => 10,
-        'SkillshotsDodged' => 0.05,
-        'TeamDamagePercentage' => 40,
-        'VisionScorePerMinute' => 1,
-        'EarlyLaningPhaseGoldExpAdvantage' => 10,
-        'ImmobilizeAndKillWithAlly' => 1,
-        'JunglerTakedownsNearDamagedEpicMonster' => 1,
-        'KillAfterHiddenWithAlly' => 1,
-        'KillsWithHelpFromEpicMonster' => 1,
-        'LandSkillShotsEarlyGame' => 1,
-        'MaxCsAdvantageOnLaneOpponent' => 0.2,
-        'MaxLevelLeadLaneOpponent' => 1,
-        'OuterTurretExecutesBefore10Minutes' => 1,
-        'OutnumberedKills' => 1,
-        'PerfectGame' => 5,
-        'QuickCleanse' => 3,
-        'QuickSoloKills' => 2,
-        'SaveAllyFromDeath' => 1,
-        'SoloKills' => 1,
-        'TakedownOnFirstTurret' => 3,
-        'ControlWardsPlaced' => 1,
-        'DodgeSkillShotsSmallWindow' => 1,
-        'EpicMonsterKillsNearEnemyJungler' => 1,
-        'EpicMonsterKillsWithin30SecondOfSpawn' => 1,
-        'KillsNearEnemyTurret' => 1,
-        'ThreeWardsOneSweeperCount' => 1,
-        'TurretPlatesTaken' => 1,
-        'UnseenRecalls' => 1,
-        'WardsGuarded' => 1
+    private array $individualBestMetrics = [
+        'DamageTakenOnTeamPercentage',
+        'KillParticipation',
+        'SkillshotsDodged',
+        'TeamDamagePercentage',
+        'VisionScorePerMinute',
+        'EarlyLaningPhaseGoldExpAdvantage',
+        'ImmobilizeAndKillWithAlly',
+        'JunglerTakedownsNearDamagedEpicMonster',
+        'KillAfterHiddenWithAlly',
+        'KillsWithHelpFromEpicMonster',
+        'LandSkillShotsEarlyGame',
+        'MaxCsAdvantageOnLaneOpponent',
+        'MaxLevelLeadLaneOpponent',
+        'OuterTurretExecutesBefore10Minutes',
+        'OutnumberedKills',
+        'PerfectGame',
+        'QuickCleanse',
+        'QuickSoloKills',
+        'SaveAllyFromDeath',
+        'SoloKills',
+        'TakedownOnFirstTurret',
+        'ControlWardsPlaced',
+        'DodgeSkillShotsSmallWindow',
+        'EpicMonsterKillsNearEnemyJungler',
+        'EpicMonsterKillsWithin30SecondOfSpawn',
+        'KillsNearEnemyTurret',
+        'ThreeWardsOneSweeperCount',
+        'TurretPlatesTaken',
+        'UnseenRecalls',
+        'WardsGuarded',
     ];
 
     private array $junglerChallenges = [
@@ -76,6 +77,13 @@ class ScoreCalculator
     ];
 
     private const MAX_CHALLENGE_BONUS = 15;
+    private const MIN_INDIVIDUAL_BEST_DIFFERENCE = 5;
+
+    private array $challengeAverages = [];
+
+    public function __construct(
+        private readonly ParticipantRepository $participantRepository,
+    ) {}
 
     private function toSnakeCase(array $array): array
     {
@@ -155,6 +163,9 @@ class ScoreCalculator
             $challenge = $participant->getChallenges();
 
             if ($challenge) {
+                $position = $this->getPositionKey($participant);
+                $challengeAverages = $this->getChallengeAverages($position, $game->getInfo()->getQueueId());
+
                 foreach ($this->challengeWeights as $metric => $weight) {
                     $getterMethod = 'get' . $metric;
                     if (method_exists($challenge, $getterMethod)) {
@@ -163,10 +174,14 @@ class ScoreCalculator
                     }
                 }
 
-                foreach ($this->individualBestWeights as $metric => $weight) {
+                foreach ($this->individualBestMetrics as $metric) {
                     $getterMethod = 'get' . $metric;
-                    if (method_exists($challenge, $getterMethod) && $this->metricCalculate($metric)) {
-                        $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = $challenge->$getterMethod() * $weight;
+                    if (method_exists($challenge, $getterMethod)) {
+                        $average = $challengeAverages[lcfirst($metric)] ?? null;
+                        if ($average !== null) {
+                            $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] =
+                                $this->calculateDifferenceFromAverage($challenge->$getterMethod(), $average);
+                        }
                     }
                 }
 
@@ -175,8 +190,10 @@ class ScoreCalculator
                         $getterMethod = 'get' . $metric;
                         if (method_exists($challenge, $getterMethod)) {
                             $value = $challenge->$getterMethod();
-                            if ($this->metricCalculate($metric)) {
-                                $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] = ($value * $weight);
+                            $average = $challengeAverages[lcfirst($metric)] ?? null;
+                            if ($average !== null) {
+                                $individualBest[$participant->getPuuid()][$this->stringToSnakeCase($metric)] =
+                                    $this->calculateDifferenceFromAverage($value, $average);
                             }
 
                             $challengeBonus += min(2, max(0, $value * $weight));
@@ -205,22 +222,34 @@ class ScoreCalculator
             ?: 'UNASSIGNED:' . $participant->getPuuid();
     }
 
-    private function metricCalculate(string $metric): bool
+    private function calculateDifferenceFromAverage(float|int $value, float $average): float
     {
-        $nonCalculate = [
-            'VisionScorePerMinute',
-            'SkillshotsDodged',
-        ];
+        $difference = ($value - $average) / max(abs($average), 1);
 
-        return !in_array($metric, $nonCalculate);
+        return round(max(-1, min(1, $difference)) * 100, 2);
+    }
+
+    private function getChallengeAverages(string $position, ?int $queueId): array
+    {
+        $key = $position . ':' . ($queueId ?? 'all');
+
+        return $this->challengeAverages[$key] ??= $this->participantRepository
+            ->getChallengeAveragesForPosition(
+                $position,
+                $queueId,
+                array_unique(array_merge($this->individualBestMetrics, array_keys($this->junglerChallenges)))
+            );
     }
 
     private function overrideIndividualBest(Participant $participant): array
     {
         $individualBest = $participant->getIndividualBest();
 
-        $nonZeroValues = array_filter($individualBest, function($value) {
-            return $value !== 0;
+        $positiveValues = array_filter($individualBest, function($value) {
+            return $value >= self::MIN_INDIVIDUAL_BEST_DIFFERENCE;
+        });
+        $negativeValues = array_filter($individualBest, function($value) {
+            return $value <= -self::MIN_INDIVIDUAL_BEST_DIFFERENCE;
         });
         $goodScores = 3;
         $badScores = 3;
@@ -240,11 +269,11 @@ class ScoreCalculator
             $badScores = 2;
         }
 
-        arsort($nonZeroValues);
-        $top5 = array_slice($nonZeroValues, 0, $goodScores, true);
+        arsort($positiveValues);
+        $top5 = array_slice($positiveValues, 0, $goodScores, true);
 
-        asort($nonZeroValues);
-        $bottom5 = array_slice($nonZeroValues, 0, $badScores, true);
+        asort($negativeValues);
+        $bottom5 = array_slice($negativeValues, 0, $badScores, true);
 
         return ['positive' => $top5, 'negative' => $bottom5];
     }
