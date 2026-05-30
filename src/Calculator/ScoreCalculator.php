@@ -17,12 +17,13 @@ class ScoreCalculator
         'GoldEarned' => 0.1,
         'ChampLevel' => 0.05,
         'VisionScore' => 0.05,
+        'DamageDealtToBuildings' => 0.05,
     ];
 
     private array $challengeWeights = [
         'DamageTakenOnTeamPercentage' => 25,
         'KillParticipation' => 10,
-        'SkillShotsDodged' => 0.05,
+        'SkillshotsDodged' => 0.05,
         'TeamDamagePercentage' => 40,
         'VisionScorePerMinute' => 1,
         'EarlyLaningPhaseGoldExpAdvantage' => 10,
@@ -39,14 +40,13 @@ class ScoreCalculator
         'QuickCleanse' => 3,
         'QuickSoloKills' => 2,
         'SaveAllyFromDeath' => 1,
-        'Solokills' => 1,
+        'SoloKills' => 1,
         'TakedownOnFirstTurret' => 3,
         'ControlWardsPlaced' => 1,
         'DodgeSkillShotsSmallWindow' => 1,
         'EpicMonsterKillsNearEnemyJungler' => 1,
         'EpicMonsterKillsWithin30SecondOfSpawn' => 1,
         'KillsNearEnemyTurret' => 1,
-        'DamageDealtToBuildings' => 1,
         'ThreeWardsOneSweeperCount' => 1,
         'TurretPlatesTaken' => 1,
         'UnseenRecalls' => 1,
@@ -229,7 +229,7 @@ class ScoreCalculator
     {
         $nonCalculate = [
             'VisionScorePerMinute',
-            'SkillShotsDodged',
+            'SkillshotsDodged',
         ];
 
         return !in_array($metric, $nonCalculate);
