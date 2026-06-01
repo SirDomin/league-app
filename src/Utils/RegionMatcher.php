@@ -85,6 +85,24 @@ class RegionMatcher
         return self::REGION_TO_PLATFORM[$region];
     }
 
+    public static function anyToPlatform(string $value): string
+    {
+        $value = strtoupper(trim($value));
+
+        if (isset(self::REGION_TO_PLATFORM[$value])) {
+            return self::REGION_TO_PLATFORM[$value];
+        }
+
+        if (isset(self::PLATFORM_TO_ROUTING[$value])) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(sprintf(
+            'NieprawidĹ‚owy region/platforma Riot: "%s"',
+            $value
+        ));
+    }
+
     /**
      * EUN1 -> europe
      * NA1 -> americas

@@ -17,6 +17,7 @@ use App\Repository\GameRepository;
 use App\Repository\ParticipantRepository;
 use App\Repository\StatsRepository;
 use App\Utils\GameBackfiller;
+use App\Utils\RegionMatcher;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializerBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -53,8 +54,48 @@ class GameController extends AbstractController
 
         $summonerData = $this->leagueApi->getSummonerDataByPuuid($data['puuid']);
         $accountData = $this->leagueApi->getAccountData($data['puuid']);
+        $puuid = $data['puuid'];
 
         $data = $this->porofessorScrapper->getActiveData($summonerData['gameName'] . '-' . $accountData['tagLine'], $region);
+
+        if (empty($data)) {
+            $activeGame = $this->leagueApi->getCurrentGameForUser(
+                $puuid,
+                strtolower(RegionMatcher::anyToPlatform($region))
+            );
+
+            if (!empty($activeGame['participants'])) {
+                $data = array_map(fn(array $participant): array => [
+                    'premade' => '',
+                    'nickname' => $participant['riotId'] ?? '',
+                    'wr' => '',
+                    'rank' => '',
+                    'tags' => [],
+                    'team_id' => $participant['teamId'] ?? null,
+                    'champion_id' => $participant['championId'] ?? null,
+                    'puuid' => $participant['puuid'] ?? null,
+                    'source' => 'riot',
+                    'summoner_id' => null,
+                    'team' => match ($participant['teamId'] ?? null) {
+                        100 => 'blue',
+                        200 => 'red',
+                        default => null,
+                    },
+                    'profile_url' => null,
+                    'champion' => null,
+                    'summoner_level' => null,
+                    'spells' => [],
+                    'champion_stats' => [
+                        'kills' => null,
+                        'deaths' => null,
+                        'assists' => null,
+                    ],
+                    'mastery' => null,
+                    'solo_rank' => null,
+                    'main_role' => null,
+                ], $activeGame['participants']);
+            }
+        }
 
         return new Response($serializer->serialize(['data' => $data], 'json'));
     }

@@ -196,10 +196,9 @@ class LeagueApi
         return $response;
     }
 
-    public function getCurrentGameForUser(string $puuid): ?array
+    public function getCurrentGameForUser(string $puuid, ?string $server = null): ?array
     {
-
-        $url = 'https://' . $this->serverName . '.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/' . $puuid;
+        $url = 'https://' . ($server ?? $this->serverName) . '.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/' . $puuid;
 
         $response = $this->getRequest($url, false);
 
