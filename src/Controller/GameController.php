@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Analyzer\PlayerAnalyzer;
 use App\ApiManager\LeagueApi;
 use App\Calculator\ScoreCalculator;
+use App\DataScrapper\MobalyticsScrapper;
 use App\DataScrapper\PorofessorScrapper;
 use App\Entity\Clip;
 use App\Entity\Game;
@@ -37,6 +38,7 @@ class GameController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly ParticipantRepository $participantRepository,
         private readonly PorofessorScrapper $porofessorScrapper,
+        private readonly MobalyticsScrapper $mobalyticsScrapper,
         private readonly ClipRepository $clipRepository,
         private readonly GameBackfiller $gameBackfiller,
         private readonly ScoreCalculator $scoreCalculator,
@@ -58,52 +60,123 @@ class GameController extends AbstractController
 
         $data = $this->porofessorScrapper->getActiveData($summonerData['gameName'] . '-' . $accountData['tagLine'], $region);
         $source = !empty($data) ? 'porofessor' : null;
+        $activeGame = $this->leagueApi->getCurrentGameForUser(
+            $puuid,
+            strtolower(RegionMatcher::anyToPlatform($region))
+        );
 
-        if (empty($data)) {
-            $activeGame = $this->leagueApi->getCurrentGameForUser(
-                $puuid,
-                strtolower(RegionMatcher::anyToPlatform($region))
-            );
-
-            if (!empty($activeGame['participants'])) {
-                $source = 'riot';
-                $data = array_map(fn(array $participant): array => [
-                    'premade' => '',
-                    'nickname' => $participant['riotId'] ?? '',
-                    'wr' => '',
-                    'rank' => '',
-                    'tags' => [],
-                    'team_id' => $participant['teamId'] ?? null,
-                    'champion_id' => $participant['championId'] ?? null,
-                    'puuid' => $participant['puuid'] ?? null,
-                    'source' => 'riot',
-                    'summoner_id' => null,
-                    'team' => match ($participant['teamId'] ?? null) {
-                        100 => 'blue',
-                        200 => 'red',
-                        default => null,
-                    },
-                    'profile_url' => null,
-                    'champion' => null,
-                    'summoner_level' => null,
-                    'spells' => [],
-                    'champion_stats' => [
-                        'kills' => null,
-                        'deaths' => null,
-                        'assists' => null,
-                    ],
-                    'mastery' => null,
-                    'solo_rank' => null,
-                    'main_role' => null,
-                ], $activeGame['participants']);
-            }
+        if (empty($data) && !empty($activeGame['participants'])) {
+            $source = 'riot';
+            $data = $this->mapRiotParticipants($activeGame['participants']);
         }
+
+        $data = $this->enrichWithMobalytics($data ?? [], $activeGame['participants'] ?? [], $region);
 
         return new Response($serializer->serialize([
             'data' => $data,
             'source' => $source,
             'degraded' => $source === 'riot',
+            'providers' => [
+                'porofessor' => $source === 'porofessor',
+                'riot' => !empty($activeGame['participants']),
+                'mobalytics' => count(array_filter($data, static fn(array $player): bool => $player['mobalytics']['available'] ?? false)),
+            ],
         ], 'json'));
+    }
+
+    private function mapRiotParticipants(array $participants): array
+    {
+        return array_map(static fn(array $participant): array => [
+            'premade' => '',
+            'nickname' => $participant['riotId'] ?? '',
+            'wr' => '',
+            'rank' => '',
+            'tags' => [],
+            'team_id' => $participant['teamId'] ?? null,
+            'champion_id' => $participant['championId'] ?? null,
+            'puuid' => $participant['puuid'] ?? null,
+            'source' => 'riot',
+            'summoner_id' => null,
+            'team' => match ($participant['teamId'] ?? null) {
+                100 => 'blue',
+                200 => 'red',
+                default => null,
+            },
+            'profile_url' => null,
+            'champion' => null,
+            'summoner_level' => null,
+            'spells' => [],
+            'champion_stats' => [
+                'kills' => null,
+                'deaths' => null,
+                'assists' => null,
+            ],
+            'mastery' => null,
+            'solo_rank' => null,
+            'main_role' => null,
+        ], $participants);
+    }
+
+    private function enrichWithMobalytics(array $players, array $riotParticipants, string $region): array
+    {
+        $riotIds = array_filter(array_map(
+            static fn(array $participant): string => $participant['riotId'] ?? '',
+            $riotParticipants,
+        ));
+
+        foreach ($players as $player) {
+            if (str_contains($player['nickname'] ?? '', '#')) {
+                $riotIds[] = $player['nickname'];
+            }
+        }
+
+        $profiles = $this->mobalyticsScrapper->getProfiles($riotIds, $region);
+
+        return array_map(function (array $player) use ($riotParticipants, $profiles): array {
+            $riotParticipant = $this->findRiotParticipant($player, $riotParticipants);
+            $riotId = $riotParticipant['riotId'] ?? $player['nickname'] ?? '';
+            $account = $this->mobalyticsScrapper->splitRiotId($riotId);
+
+            if ($riotParticipant !== null) {
+                $player['riot_id'] = $riotId;
+                $player['team_id'] ??= $riotParticipant['teamId'] ?? null;
+                $player['champion_id'] ??= $riotParticipant['championId'] ?? null;
+                $player['puuid'] ??= $riotParticipant['puuid'] ?? null;
+            }
+
+            if ($account === null) {
+                $player['mobalytics'] = null;
+                $player['labels'] = [];
+
+                return $player;
+            }
+
+            [$gameName, $tagLine] = $account;
+            $profile = $profiles[$this->mobalyticsScrapper->getProfileKey($gameName, $tagLine)] ?? null;
+
+            $player['mobalytics'] = $profile;
+            $player['labels'] = $profile['labels'] ?? [];
+
+            return $player;
+        }, $players);
+    }
+
+    private function findRiotParticipant(array $player, array $riotParticipants): ?array
+    {
+        $nickname = $this->normalizeNickname($player['nickname'] ?? '');
+
+        foreach ($riotParticipants as $participant) {
+            if ($nickname !== '' && $nickname === $this->normalizeNickname($participant['riotId'] ?? '')) {
+                return $participant;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeNickname(string $nickname): string
+    {
+        return strtolower(preg_replace('/\s+/u', '', explode('#', $nickname, 2)[0]));
     }
 
     #[Route('/game/by-puuid/{puuid}', name: 'game-show', methods: ['GET'])]
