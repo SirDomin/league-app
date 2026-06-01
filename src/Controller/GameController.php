@@ -80,6 +80,7 @@ class GameController extends AbstractController
                 'porofessor' => $source === 'porofessor',
                 'riot' => !empty($activeGame['participants']),
                 'mobalytics' => count(array_filter($data, static fn(array $player): bool => $player['mobalytics']['available'] ?? false)),
+                'mobalytics_blocked' => count(array_filter($data, static fn(array $player): bool => ($player['mobalytics']['status'] ?? null) === 'blocked')),
             ],
         ], 'json'));
     }

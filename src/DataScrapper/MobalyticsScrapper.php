@@ -11,7 +11,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class MobalyticsScrapper
 {
-    private const GRAPHQL_URL = 'https://mobalytics.gg/api/lol/v1/graphql/query';
+    private const GRAPHQL_URL = 'https://mobalytics.gg/api/lol/graphql/v1/query';
 
     private const PROFILE_QUERY = <<<'GRAPHQL'
 query ActiveGameMobalyticsProfile($region: Region!, $tagLine: String!, $gameName: String!) {
@@ -92,6 +92,8 @@ GRAPHQL;
         $region = $this->normalizeServer($server);
         $profiles = [];
         $requests = [];
+        $providerCacheItem = $this->cache->getItem('provider_status');
+        $providerStatus = $providerCacheItem->isHit() ? $providerCacheItem->get() : null;
 
         foreach (array_unique($riotIds) as $riotId) {
             $account = $this->splitRiotId($riotId);
@@ -104,6 +106,11 @@ GRAPHQL;
             $key = $this->getProfileKey($gameName, $tagLine);
             $profileUrl = $this->getProfileUrl($region, $gameName, $tagLine);
             $cacheItem = $this->cache->getItem(hash('sha256', $region . '|' . $key));
+
+            if ($providerStatus === 'blocked') {
+                $profiles[$key] = $this->getEmptyProfile($profileUrl, 'blocked', 'cloudflare_challenge');
+                continue;
+            }
 
             if ($cacheItem->isHit()) {
                 $profiles[$key] = $cacheItem->get();
@@ -133,7 +140,7 @@ GRAPHQL;
                     ]),
                 ];
             } catch (TransportExceptionInterface) {
-                $cacheItem->set($this->getEmptyProfile($profileUrl));
+                $cacheItem->set($this->getEmptyProfile($profileUrl, 'unavailable', 'transport_error'));
                 $cacheItem->expiresAfter(300);
                 $this->cache->save($cacheItem);
                 $profiles[$key] = $cacheItem->get();
@@ -142,6 +149,13 @@ GRAPHQL;
 
         foreach ($requests as $key => $request) {
             $profile = $this->getProfileFromResponse($request['response'], $request['profile_url']);
+
+            if ($profile['status'] === 'blocked') {
+                $providerCacheItem->set('blocked');
+                $providerCacheItem->expiresAfter(300);
+                $this->cache->save($providerCacheItem);
+            }
+
             $request['cache_item']->set($profile);
             $request['cache_item']->expiresAfter($profile['available'] ? 1800 : 300);
             $this->cache->save($request['cache_item']);
@@ -183,11 +197,15 @@ GRAPHQL;
 
     private function getProfileFromResponse(ResponseInterface $response, string $profileUrl): array
     {
-        $emptyProfile = $this->getEmptyProfile($profileUrl);
-
         try {
-            if ($response->getStatusCode() !== 200) {
-                return $emptyProfile;
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode !== 200) {
+                return $this->getEmptyProfile(
+                    $profileUrl,
+                    $statusCode === 403 ? 'blocked' : 'unavailable',
+                    $statusCode === 403 ? 'cloudflare_challenge' : 'http_' . $statusCode,
+                );
             }
 
             $content = $response->getContent(false);
@@ -196,17 +214,19 @@ GRAPHQL;
                 str_contains($content, 'challenges.cloudflare.com')
                 || str_contains($content, 'Enable JavaScript and cookies to continue')
             ) {
-                return $emptyProfile;
+                return $this->getEmptyProfile($profileUrl, 'blocked', 'cloudflare_challenge');
             }
 
             $player = json_decode($content, true)['data']['lol']['player'] ?? null;
 
             if (!is_array($player)) {
-                return $emptyProfile;
+                return $this->getEmptyProfile($profileUrl, 'unavailable', 'profile_not_found');
             }
 
             return [
                 'available' => true,
+                'status' => 'available',
+                'reason' => null,
                 'profile_url' => $profileUrl,
                 'labels' => array_values(array_map(static fn(array $badge): array => [
                     'label' => $badge['name'] ?? $badge['slug'] ?? '',
@@ -222,14 +242,16 @@ GRAPHQL;
                 'performance_metrics' => array_values($player['performanceMetrics']['items'] ?? []),
             ];
         } catch (TransportExceptionInterface) {
-            return $emptyProfile;
+            return $this->getEmptyProfile($profileUrl, 'unavailable', 'transport_error');
         }
     }
 
-    private function getEmptyProfile(string $profileUrl): array
+    private function getEmptyProfile(string $profileUrl, string $status = 'unavailable', ?string $reason = null): array
     {
         return [
             'available' => false,
+            'status' => $status,
+            'reason' => $reason,
             'profile_url' => $profileUrl,
             'labels' => [],
             'ranks' => [],
