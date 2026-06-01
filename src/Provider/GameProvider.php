@@ -21,7 +21,7 @@ class GameProvider
     {
     }
 
-    private function parseGame(?array $gameData): Game
+    private function parseGame(array $gameData): Game
     {
         $metadata = new Metadata();
         $metadata->setMatchId($gameData['metadata']['matchId']);
@@ -124,12 +124,30 @@ class GameProvider
             return $game;
         }
 
-        return $this->parseGame($this->leagueApi->getGameById($matchId));
+        $gameData = $this->leagueApi->getGameById($matchId);
+
+        if (!isset($gameData['metadata'], $gameData['info'])) {
+            return [];
+        }
+
+        return $this->parseGame($gameData);
     }
 
     public function provideGameForRegionByMatchId(string $matchId, string $region): Game|array
     {
-        return $this->parseGame($this->leagueApi->getMatch($matchId, $region));
+        $game = $this->gameRepository->findByMatchId($matchId);
+
+        if ($game) {
+            return $game;
+        }
+
+        $gameData = $this->leagueApi->getMatch($matchId, $region);
+
+        if (!isset($gameData['metadata'], $gameData['info'])) {
+            return [];
+        }
+
+        return $this->parseGame($gameData);
     }
 
 

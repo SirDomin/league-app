@@ -237,7 +237,12 @@ class BoosterController extends AbstractController
         $gamesToAnalyze = 20;
 
         return new Response($serializer->serialize([
-            'analyze' => $this->playerAnalyzer->analyze($existingBooster->getSummonerName(), $existingBooster->getSummonerTag(), $gamesToAnalyze),
+            'analyze' => $this->playerAnalyzer->analyze(
+                $existingBooster->getSummonerName(),
+                $existingBooster->getSummonerTag(),
+                $gamesToAnalyze,
+                $existingBooster->getRegion()
+            ),
             'games' => $gamesToAnalyze,
         ], 'json'), Response::HTTP_OK);
     }
