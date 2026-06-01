@@ -175,13 +175,17 @@ class SummonerController extends AbstractController
     }
 
     #[Route('/summoner/{summonerName}/{tag}/games', name: 'summoner-tag-games', methods: ['GET'])]
-    public function getGamesWithNameAndTag(string $summonerName, string $tag): Response
+    public function getGamesWithNameAndTag(string $summonerName, string $tag, Request $request): Response
     {
         $serializer = SerializerBuilder::create()->build();
+        $limit = max(1, min(50, $request->query->getInt('limit', 20)));
+        $start = max(0, $request->query->getInt('start', 0));
 
         $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
 
-        $games = $this->gameRepository->getAllGamesWithPlayer($accountData['puuid']);
+        $games = $this->gameRepository->getAllGamesWithPlayer($accountData['puuid'], $limit + 1, $start);
+        $hasMore = count($games) > $limit;
+        $games = array_slice($games, 0, $limit);
 
         $fullDataGames = [];
 
@@ -197,7 +201,13 @@ class SummonerController extends AbstractController
             $fullDataGames[] = $fullGameData;
         }
 
-        return new Response($serializer->serialize(['games' => $fullDataGames], 'json'));
+        return new Response($serializer->serialize([
+            'games' => $fullDataGames,
+            'limit' => $limit,
+            'start' => $start,
+            'nextStart' => $start + count($fullDataGames),
+            'hasMore' => $hasMore,
+        ], 'json'));
     }
 
     private function getParticipantByPuuid(Collection $participants, string $puuid): Participant

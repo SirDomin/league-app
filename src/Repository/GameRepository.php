@@ -247,7 +247,7 @@ class GameRepository extends ServiceEntityRepository
         return $this->getGames($ids);
     }
 
-    public function getAllGamesWithPlayer(string $puuid): array
+    public function getAllGamesWithPlayer(string $puuid, int $limit = 0, int $start = 0): array
     {
         $query = $this
             ->createQueryBuilder('g')
@@ -263,6 +263,14 @@ class GameRepository extends ServiceEntityRepository
             ->setParameter('puuid', $puuid)
             ->addOrderBy('i.gameStartTimestamp', 'DESC')
         ;
+
+        if ($start > 0) {
+            $query->setFirstResult($start);
+        }
+
+        if ($limit > 0) {
+            $query->setMaxResults($limit);
+        }
 
         return $query->getQuery()->getArrayResult();
     }
@@ -305,9 +313,15 @@ class GameRepository extends ServiceEntityRepository
 
     public function countAllGamesWithPlayer(string $puuid): int
     {
-        $results = $this->getGamesWithPlayer($puuid);
-
-        return count($results);
+        return (int) $this
+            ->createQueryBuilder('g')
+            ->select('COUNT(DISTINCT g.id)')
+            ->leftJoin('g.info', 'i')
+            ->leftJoin('i.participants', 'participant')
+            ->where('participant.puuid = :puuid')
+            ->setParameter('puuid', $puuid)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     public function getGameByInfoId(int $id): ?Game
