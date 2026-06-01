@@ -15,7 +15,7 @@ class PorofessorScrapper
         $server = $this->normalizeServer($server);
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, \sprintf('https://porofessor.gg/live/%s/%s', $server, rawurlencode($summonerName)));
+        curl_setopt($ch, CURLOPT_URL, \sprintf('https://porofessor.gg/partial/live-partial/%s/%s', $server, rawurlencode($summonerName)));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
