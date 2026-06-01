@@ -43,7 +43,12 @@ class PorofessorScrapper
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if (!is_string($response) || $statusCode >= 400) {
+        if (
+            !is_string($response)
+            || $statusCode >= 400
+            || str_contains($response, 'challenges.cloudflare.com')
+            || str_contains($response, 'Enable JavaScript and cookies to continue')
+        ) {
             return [];
         }
 

@@ -57,6 +57,7 @@ class GameController extends AbstractController
         $puuid = $data['puuid'];
 
         $data = $this->porofessorScrapper->getActiveData($summonerData['gameName'] . '-' . $accountData['tagLine'], $region);
+        $source = !empty($data) ? 'porofessor' : null;
 
         if (empty($data)) {
             $activeGame = $this->leagueApi->getCurrentGameForUser(
@@ -65,6 +66,7 @@ class GameController extends AbstractController
             );
 
             if (!empty($activeGame['participants'])) {
+                $source = 'riot';
                 $data = array_map(fn(array $participant): array => [
                     'premade' => '',
                     'nickname' => $participant['riotId'] ?? '',
@@ -97,7 +99,11 @@ class GameController extends AbstractController
             }
         }
 
-        return new Response($serializer->serialize(['data' => $data], 'json'));
+        return new Response($serializer->serialize([
+            'data' => $data,
+            'source' => $source,
+            'degraded' => $source === 'riot',
+        ], 'json'));
     }
 
     #[Route('/game/by-puuid/{puuid}', name: 'game-show', methods: ['GET'])]
