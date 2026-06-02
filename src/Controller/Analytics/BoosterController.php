@@ -20,6 +20,15 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class BoosterController extends AbstractController
 {
+    private const VERIFY_ICON_IDS = [
+        1, 2, 3, 4, 5, 6, 7,
+        8, 9, 10, 11, 12, 13, 14,
+        15, 16, 17, 18, 19, 20, 21, 22,
+        24, 25, 26, 27, 28,
+    ];
+
+    private const PROFILE_ICON_BASE_URL = 'https://ddragon.leagueoflegends.com/cdn/15.24.1/img/profileicon/';
+
     public function __construct(
         private readonly LeagueApi $leagueApi,
         private readonly EntityManagerInterface $entityManager,
@@ -120,7 +129,7 @@ class BoosterController extends AbstractController
     {
         $serializer = SerializerBuilder::create()->build();
 
-        $randomIconId = random_int(1, 28);
+        $randomIconId = self::VERIFY_ICON_IDS[array_rand(self::VERIFY_ICON_IDS)];
 
         /** @var Booster|null $existingBooster */
         $existingBooster = $this->boosterRepository->findOneBy(['id' => $id]);
@@ -133,11 +142,18 @@ class BoosterController extends AbstractController
 //            return new Response($serializer->serialize(['error' => 'User already verified'], 'json'), Response::HTTP_BAD_REQUEST);
 //        }
 
-        if ($existingBooster->getIconIdToVerify() !== null && $existingBooster->getIconIdToVerify() !== 0) {
+        if (
+            $existingBooster->getIconIdToVerify() !== null
+            && $existingBooster->getIconIdToVerify() !== 0
+            && $existingBooster->getExpiresAt() !== null
+            && $existingBooster->getExpiresAt() > new \DateTimeImmutable()
+        ) {
             return new Response($serializer->serialize([
                 'error' => 'already verifying',
-                'icon' => 'https://ddragon.leagueoflegends.com/cdn/15.24.1/img/profileicon/' . $existingBooster->getIconIdToVerify() . '.png'
-            ], 'json'), Response::HTTP_BAD_REQUEST);
+                'iconId' => $existingBooster->getIconIdToVerify(),
+                'icon' => $this->getProfileIconUrl($existingBooster->getIconIdToVerify()),
+                'expires_at' => $existingBooster->getExpiresAt()->format('Y-m-d H:i:s'),
+            ], 'json'), Response::HTTP_OK);
         }
 
         $existingBooster->setIconIdToVerify($randomIconId);
@@ -147,8 +163,10 @@ class BoosterController extends AbstractController
         $this->entityManager->flush();
 
         return new Response($serializer->serialize([
-            'icon' => 'https://ddragon.leagueoflegends.com/cdn/15.24.1/img/profileicon/' . $randomIconId . '.png',
-        ], 'json'), Response::HTTP_UNAUTHORIZED);
+            'iconId' => $randomIconId,
+            'icon' => $this->getProfileIconUrl($randomIconId),
+            'expires_at' => $existingBooster->getExpiresAt()->format('Y-m-d H:i:s'),
+        ], 'json'), Response::HTTP_OK);
     }
 
     #[Route('/lolanal/booster/{id}/verify', name: 'verify', methods: ['POST'])]
@@ -186,7 +204,10 @@ class BoosterController extends AbstractController
 
         $data = $this->leagueApi->getSummonerDataByPuuid($existingBooster->getPuuid(), false, server: $existingBooster->getRegion());
 
-        if ($data['profileIconId'] && $data['profileIconId'] === $existingBooster->getIconIdToVerify()) {
+        $expectedIcon = $existingBooster->getIconIdToVerify();
+        $currentIcon = $data['profileIconId'] ?? null;
+
+        if ($currentIcon && $currentIcon === $expectedIcon) {
             $existingBooster->setIconIdToVerify(null);
             $existingBooster->setExpiresAt(null);
             $existingBooster->setValid(true);
@@ -203,8 +224,8 @@ class BoosterController extends AbstractController
         return new Response($serializer->serialize([
             'valid' => $existingBooster->isValid(),
             'debug' => [
-              'current_icon' => $data['profileIconId'],
-              'expected_icon' => $existingBooster->getIconIdToVerify(),
+              'current_icon' => $currentIcon,
+              'expected_icon' => $expectedIcon,
             ],
             'valid_until' => $existingBooster->getValidUntil()?->format('Y-m-d H:i:s') ?? null,
         ], 'json'), Response::HTTP_OK);
@@ -338,4 +359,8 @@ class BoosterController extends AbstractController
         return $out ?: null;
     }
 
+    private function getProfileIconUrl(int $iconId): string
+    {
+        return self::PROFILE_ICON_BASE_URL . $iconId . '.png';
+    }
 }
