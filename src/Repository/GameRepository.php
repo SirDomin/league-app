@@ -110,36 +110,44 @@ class GameRepository extends ServiceEntityRepository
         ;
 
         if (isset($filters['allyTeam']) && $filters['allyTeam'] !== []) {
-            $qb->innerJoin('i.participants', 'sameTeamParticipants', 'WITH', 'sameTeamParticipants.teamId = participantWithPuuid.teamId');
+            if (isset($filters['allyTeam']['players']) && is_array($filters['allyTeam']['players'])) {
+                $this->applyTeamPlayerFilters($qb, $filters['allyTeam']['players'], 'allyTeamPlayer', 'participantWithPuuid.teamId');
+            } else {
+                $qb->innerJoin('i.participants', 'sameTeamParticipants', 'WITH', 'sameTeamParticipants.teamId = participantWithPuuid.teamId');
 
-            foreach ($filters['allyTeam'] as $allyTeamFilterName => $filterData) {
-                if ($allyTeamFilterName === 'riotIdGameName') {
-                    $qb->andWhere('sameTeamParticipants.' . $allyTeamFilterName . ' LIKE :' . $allyTeamFilterName)
-                        ->setParameter($allyTeamFilterName, '%' . $filterData . '%');
-                    $qb->orWhere('sameTeamParticipants.summonerName LIKE :' . $allyTeamFilterName)
-                        ->setParameter($allyTeamFilterName, '%' . $filterData . '%');
-                } else {
-                    $qb->andWhere('sameTeamParticipants.' . $allyTeamFilterName . ' = :allyTeam' . $allyTeamFilterName)
-                        ->setParameter('allyTeam' . $allyTeamFilterName, $filterData);
+                foreach ($filters['allyTeam'] as $allyTeamFilterName => $filterData) {
+                    if ($allyTeamFilterName === 'riotIdGameName') {
+                        $qb->andWhere('sameTeamParticipants.' . $allyTeamFilterName . ' LIKE :' . $allyTeamFilterName)
+                            ->setParameter($allyTeamFilterName, '%' . $filterData . '%');
+                        $qb->orWhere('sameTeamParticipants.summonerName LIKE :' . $allyTeamFilterName)
+                            ->setParameter($allyTeamFilterName, '%' . $filterData . '%');
+                    } else {
+                        $qb->andWhere('sameTeamParticipants.' . $allyTeamFilterName . ' = :allyTeam' . $allyTeamFilterName)
+                            ->setParameter('allyTeam' . $allyTeamFilterName, $filterData);
 
+                    }
                 }
             }
         }
 
         if (isset($filters['enemyTeam']) && $filters['enemyTeam'] !== []) {
-            $qb->innerJoin('i.participants', 'enemyTeamParticipants', 'WITH', 'enemyTeamParticipants.teamId != participantWithPuuid.teamId');
+            if (isset($filters['enemyTeam']['players']) && is_array($filters['enemyTeam']['players'])) {
+                $this->applyTeamPlayerFilters($qb, $filters['enemyTeam']['players'], 'enemyTeamPlayer', null, true);
+            } else {
+                $qb->innerJoin('i.participants', 'enemyTeamParticipants', 'WITH', 'enemyTeamParticipants.teamId != participantWithPuuid.teamId');
 
-            foreach ($filters['enemyTeam'] as $enemyTeamFilterName => $filterData) {
-                if ($enemyTeamFilterName === 'riotIdGameName') {
-                    $qb->andWhere('enemyTeamParticipants.' . $enemyTeamFilterName . ' LIKE :' . $enemyTeamFilterName)
-                        ->setParameter($enemyTeamFilterName, '%' . $filterData . '%');
-                    $qb->orWhere('enemyTeamParticipants.summonerName LIKE :' . $enemyTeamFilterName)
-                        ->setParameter($enemyTeamFilterName, '%' . $filterData . '%');
-                } else {
-                    $qb->andWhere('enemyTeamParticipants.' . $enemyTeamFilterName . ' = :enemyTeam' . $enemyTeamFilterName)
-                        ->setParameter('enemyTeam' . $enemyTeamFilterName, $filterData);
+                foreach ($filters['enemyTeam'] as $enemyTeamFilterName => $filterData) {
+                    if ($enemyTeamFilterName === 'riotIdGameName') {
+                        $qb->andWhere('enemyTeamParticipants.' . $enemyTeamFilterName . ' LIKE :' . $enemyTeamFilterName)
+                            ->setParameter($enemyTeamFilterName, '%' . $filterData . '%');
+                        $qb->orWhere('enemyTeamParticipants.summonerName LIKE :' . $enemyTeamFilterName)
+                            ->setParameter($enemyTeamFilterName, '%' . $filterData . '%');
+                    } else {
+                        $qb->andWhere('enemyTeamParticipants.' . $enemyTeamFilterName . ' = :enemyTeam' . $enemyTeamFilterName)
+                            ->setParameter('enemyTeam' . $enemyTeamFilterName, $filterData);
+                    }
+
                 }
-
             }
         }
 
@@ -161,6 +169,10 @@ class GameRepository extends ServiceEntityRepository
             if (isset($filters['info']['queueId'])) {
                 $qb->andWhere('i.queueId = :queueId')
                     ->setParameter('queueId', (int) $filters['info']['queueId']);
+            }
+            if (isset($filters['info']['queueGroup']) && $filters['info']['queueGroup'] === 'ranked') {
+                $qb->andWhere('i.queueId IN (:rankedQueueIds)')
+                    ->setParameter('rankedQueueIds', [420, 440]);
             }
         }
 
@@ -185,6 +197,61 @@ class GameRepository extends ServiceEntityRepository
 
         return $minimizedGames;
 
+    }
+
+    private function applyTeamPlayerFilters($qb, array $players, string $aliasPrefix, ?string $teamExpression = null, bool $enemyTeam = false): void
+    {
+        $enemyTeamAlias = null;
+
+        foreach (array_values($players) as $index => $player) {
+            if (!is_array($player) || (empty($player['puuid']) && empty($player['gameName']))) {
+                continue;
+            }
+
+            $alias = $aliasPrefix . $index;
+            $joinCondition = $teamExpression
+                ? $alias . '.teamId = ' . $teamExpression
+                : $alias . '.teamId != participantWithPuuid.teamId';
+
+            if ($enemyTeam && $enemyTeamAlias !== null) {
+                $joinCondition = $alias . '.teamId = ' . $enemyTeamAlias . '.teamId';
+            }
+
+            $qb->innerJoin('i.participants', $alias, 'WITH', $joinCondition);
+            $identityConditions = $qb->expr()->orX();
+            $hasIdentityCondition = false;
+
+            if (!empty($player['puuid'])) {
+                $identityConditions->add($alias . '.puuid = :' . $alias . 'Puuid');
+                $qb->setParameter($alias . 'Puuid', $player['puuid']);
+                $hasIdentityCondition = true;
+            }
+
+            if (!empty($player['gameName'])) {
+                $identityConditions->add($alias . '.riotIdGameName LIKE :' . $alias . 'GameName');
+                $identityConditions->add($alias . '.summonerName LIKE :' . $alias . 'GameName');
+                $qb->setParameter($alias . 'GameName', '%' . $player['gameName'] . '%');
+                $hasIdentityCondition = true;
+            }
+
+            if ($hasIdentityCondition) {
+                $qb->andWhere($identityConditions);
+            }
+
+            if (!empty($player['individualPosition'])) {
+                $qb->andWhere($alias . '.individualPosition = :' . $alias . 'Position')
+                    ->setParameter($alias . 'Position', $player['individualPosition']);
+            }
+
+            if (!empty($player['championId'])) {
+                $qb->andWhere($alias . '.championId = :' . $alias . 'ChampionId')
+                    ->setParameter($alias . 'ChampionId', (int) $player['championId']);
+            }
+
+            if ($enemyTeam && $enemyTeamAlias === null) {
+                $enemyTeamAlias = $alias;
+            }
+        }
     }
 
     private function getAllGamesMinimized(array $gameIds, int $start, int $limit): array {

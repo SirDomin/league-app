@@ -660,6 +660,108 @@ class Challenge
      */
     private $InfernalScalePickup = 0;
 
+    // Riot Match API challenge fields added after parser audit.
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $controlWardTimeCoverageInRiverOrEnemyHalf = null;
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $earliestDragonTakedown = null;
+
+    /**
+     * @ORM\Column(name="heal_from_map_sources", type="float", nullable=true)
+     */
+    private $healFromMapSources = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $highestChampionDamage = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $highestCrowdControlScore = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $highestWardKills = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $junglerKillsEarlyJungle = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $killsOnLanersEarlyJungleAsJungler = null;
+
+    /**
+     * @ORM\Column(type="json", nullable=true)
+     */
+    private $legendaryItemUsed = [];
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $shortestTimeToAceFromFirstTakedown = null;
+
+    /**
+     * @ORM\Column(name="swarm_defeat_aatrox", type="integer", nullable=true)
+     */
+    private $swarmDefeatAatrox = null;
+
+    /**
+     * @ORM\Column(name="swarm_defeat_briar", type="integer", nullable=true)
+     */
+    private $swarmDefeatBriar = null;
+
+    /**
+     * @ORM\Column(name="swarm_defeat_mini_bosses", type="integer", nullable=true)
+     */
+    private $swarmDefeatMiniBosses = null;
+
+    /**
+     * @ORM\Column(name="swarm_evolve_weapon", type="integer", nullable=true)
+     */
+    private $swarmEvolveWeapon = null;
+
+    /**
+     * @ORM\Column(name="swarm_have3_passives", type="integer", nullable=true)
+     */
+    private $swarmHave3Passives = null;
+
+    /**
+     * @ORM\Column(name="swarm_kill_enemy", type="integer", nullable=true)
+     */
+    private $swarmKillEnemy = null;
+
+    /**
+     * @ORM\Column(name="swarm_pickup_gold", type="integer", nullable=true)
+     */
+    private $swarmPickupGold = null;
+
+    /**
+     * @ORM\Column(name="swarm_reach_level50", type="integer", nullable=true)
+     */
+    private $swarmReachLevel50 = null;
+
+    /**
+     * @ORM\Column(name="swarm_survive15_min", type="integer", nullable=true)
+     */
+    private $swarmSurvive15Min = null;
+
+    /**
+     * @ORM\Column(name="swarm_win_with5_evolved_weapons", type="integer", nullable=true)
+     */
+    private $swarmWinWith5EvolvedWeapons = null;
+
     /**
      * @return mixed
      */
@@ -2550,6 +2652,208 @@ class Challenge
     public function setAssistStreakCount($assistStreakCount): void
     {
         $this->assistStreakCount = $assistStreakCount;
+    }
+
+    // Riot Match API challenge accessors added after parser audit.
+
+    public function getControlWardTimeCoverageInRiverOrEnemyHalf()
+    {
+        return $this->controlWardTimeCoverageInRiverOrEnemyHalf;
+    }
+
+    public function setControlWardTimeCoverageInRiverOrEnemyHalf($controlWardTimeCoverageInRiverOrEnemyHalf): void
+    {
+        $this->controlWardTimeCoverageInRiverOrEnemyHalf = $controlWardTimeCoverageInRiverOrEnemyHalf;
+    }
+
+    public function getEarliestDragonTakedown()
+    {
+        return $this->earliestDragonTakedown;
+    }
+
+    public function setEarliestDragonTakedown($earliestDragonTakedown): void
+    {
+        $this->earliestDragonTakedown = $earliestDragonTakedown;
+    }
+
+    public function getHealFromMapSources()
+    {
+        return $this->healFromMapSources;
+    }
+
+    public function setHealFromMapSources($healFromMapSources): void
+    {
+        $this->healFromMapSources = $healFromMapSources;
+    }
+
+    public function getHighestChampionDamage()
+    {
+        return $this->highestChampionDamage;
+    }
+
+    public function setHighestChampionDamage($highestChampionDamage): void
+    {
+        $this->highestChampionDamage = $highestChampionDamage;
+    }
+
+    public function getHighestCrowdControlScore()
+    {
+        return $this->highestCrowdControlScore;
+    }
+
+    public function setHighestCrowdControlScore($highestCrowdControlScore): void
+    {
+        $this->highestCrowdControlScore = $highestCrowdControlScore;
+    }
+
+    public function getHighestWardKills()
+    {
+        return $this->highestWardKills;
+    }
+
+    public function setHighestWardKills($highestWardKills): void
+    {
+        $this->highestWardKills = $highestWardKills;
+    }
+
+    public function getJunglerKillsEarlyJungle()
+    {
+        return $this->junglerKillsEarlyJungle;
+    }
+
+    public function setJunglerKillsEarlyJungle($junglerKillsEarlyJungle): void
+    {
+        $this->junglerKillsEarlyJungle = $junglerKillsEarlyJungle;
+    }
+
+    public function getKillsOnLanersEarlyJungleAsJungler()
+    {
+        return $this->killsOnLanersEarlyJungleAsJungler;
+    }
+
+    public function setKillsOnLanersEarlyJungleAsJungler($killsOnLanersEarlyJungleAsJungler): void
+    {
+        $this->killsOnLanersEarlyJungleAsJungler = $killsOnLanersEarlyJungleAsJungler;
+    }
+
+    public function getLegendaryItemUsed()
+    {
+        return $this->legendaryItemUsed;
+    }
+
+    public function setLegendaryItemUsed($legendaryItemUsed): void
+    {
+        $this->legendaryItemUsed = $legendaryItemUsed;
+    }
+
+    public function getShortestTimeToAceFromFirstTakedown()
+    {
+        return $this->shortestTimeToAceFromFirstTakedown;
+    }
+
+    public function setShortestTimeToAceFromFirstTakedown($shortestTimeToAceFromFirstTakedown): void
+    {
+        $this->shortestTimeToAceFromFirstTakedown = $shortestTimeToAceFromFirstTakedown;
+    }
+
+    public function getSWARM_DefeatAatrox()
+    {
+        return $this->swarmDefeatAatrox;
+    }
+
+    public function setSWARM_DefeatAatrox($swarmDefeatAatrox): void
+    {
+        $this->swarmDefeatAatrox = $swarmDefeatAatrox;
+    }
+
+    public function getSWARM_DefeatBriar()
+    {
+        return $this->swarmDefeatBriar;
+    }
+
+    public function setSWARM_DefeatBriar($swarmDefeatBriar): void
+    {
+        $this->swarmDefeatBriar = $swarmDefeatBriar;
+    }
+
+    public function getSWARM_DefeatMiniBosses()
+    {
+        return $this->swarmDefeatMiniBosses;
+    }
+
+    public function setSWARM_DefeatMiniBosses($swarmDefeatMiniBosses): void
+    {
+        $this->swarmDefeatMiniBosses = $swarmDefeatMiniBosses;
+    }
+
+    public function getSWARM_EvolveWeapon()
+    {
+        return $this->swarmEvolveWeapon;
+    }
+
+    public function setSWARM_EvolveWeapon($swarmEvolveWeapon): void
+    {
+        $this->swarmEvolveWeapon = $swarmEvolveWeapon;
+    }
+
+    public function getSWARM_Have3Passives()
+    {
+        return $this->swarmHave3Passives;
+    }
+
+    public function setSWARM_Have3Passives($swarmHave3Passives): void
+    {
+        $this->swarmHave3Passives = $swarmHave3Passives;
+    }
+
+    public function getSWARM_KillEnemy()
+    {
+        return $this->swarmKillEnemy;
+    }
+
+    public function setSWARM_KillEnemy($swarmKillEnemy): void
+    {
+        $this->swarmKillEnemy = $swarmKillEnemy;
+    }
+
+    public function getSWARM_PickupGold()
+    {
+        return $this->swarmPickupGold;
+    }
+
+    public function setSWARM_PickupGold($swarmPickupGold): void
+    {
+        $this->swarmPickupGold = $swarmPickupGold;
+    }
+
+    public function getSWARM_ReachLevel50()
+    {
+        return $this->swarmReachLevel50;
+    }
+
+    public function setSWARM_ReachLevel50($swarmReachLevel50): void
+    {
+        $this->swarmReachLevel50 = $swarmReachLevel50;
+    }
+
+    public function getSWARM_Survive15Min()
+    {
+        return $this->swarmSurvive15Min;
+    }
+
+    public function setSWARM_Survive15Min($swarmSurvive15Min): void
+    {
+        $this->swarmSurvive15Min = $swarmSurvive15Min;
+    }
+
+    public function getSWARM_WinWith5EvolvedWeapons()
+    {
+        return $this->swarmWinWith5EvolvedWeapons;
+    }
+
+    public function setSWARM_WinWith5EvolvedWeapons($swarmWinWith5EvolvedWeapons): void
+    {
+        $this->swarmWinWith5EvolvedWeapons = $swarmWinWith5EvolvedWeapons;
     }
 
     public function getInfernalScalePickup(): int

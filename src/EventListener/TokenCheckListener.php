@@ -34,6 +34,7 @@ class TokenCheckListener
         if (!$this->isValidToken($tokenValue)) {
             $response = new Response('Unauthorized', Response::HTTP_UNAUTHORIZED);
             $event->setResponse($response);
+            return;
         }
 
         $session = new Session();
@@ -49,7 +50,7 @@ class TokenCheckListener
 
     private function isValidToken($tokenValue): bool
     {
-        if (!str_contains($tokenValue, 'Bearer ')) {
+        if (!is_string($tokenValue) || !str_contains($tokenValue, 'Bearer ')) {
             return false;
         }
 

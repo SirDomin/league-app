@@ -180,6 +180,7 @@ class SummonerController extends AbstractController
         $serializer = SerializerBuilder::create()->build();
         $limit = max(1, min(50, $request->query->getInt('limit', 20)));
         $start = max(0, $request->query->getInt('start', 0));
+        $activePuuid = $request->query->get('activePuuid');
 
         $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
 
@@ -193,9 +194,18 @@ class SummonerController extends AbstractController
             $fullGameData = $this->scoreCalculator->calculateScoreForGame($this->gameRepository->find($game['id']));
 
             $participants = $fullGameData->getInfo()->getParticipants();
+            $targetParticipant = $this->getParticipantByPuuid($participants, $accountData['puuid']);
+
+            if ($activePuuid) {
+                $activeParticipant = $this->getParticipantByPuuid($participants, $activePuuid);
+                $targetParticipant->setTeamRelation($this->areParticipantsAllies($targetParticipant, $activeParticipant)
+                    ? 'Ally'
+                    : 'Enemy');
+                $targetParticipant->setActivePlayerWin($activeParticipant->getWin());
+            }
 
             $fullGameData->getInfo()->setParticipants([
-                $this->getParticipantByPuuid($participants, $accountData['puuid'])
+                $targetParticipant
             ]);
 
             $fullDataGames[] = $fullGameData;
@@ -219,5 +229,17 @@ class SummonerController extends AbstractController
         }
 
         throw new \Exception('user not found in game');
+    }
+
+    private function areParticipantsAllies(Participant $targetParticipant, Participant $activeParticipant): bool
+    {
+        $targetSubteamId = $targetParticipant->getPlayerSubteamId();
+        $activeSubteamId = $activeParticipant->getPlayerSubteamId();
+
+        if ($targetSubteamId !== null && $targetSubteamId > 0 && $activeSubteamId !== null && $activeSubteamId > 0) {
+            return $targetSubteamId === $activeSubteamId;
+        }
+
+        return $targetParticipant->getTeamId() === $activeParticipant->getTeamId();
     }
 }

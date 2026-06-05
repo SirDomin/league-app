@@ -694,11 +694,142 @@ class Participant
      */
     private $subteamPlacement = null;
 
+    // Riot Match API fields added after parser audit.
+
+    /**
+     * @ORM\Column(name="caused_game_end_from_ignb_surrender", type="boolean", nullable=true)
+     */
+    private $causedGameEndFromIGNBSurrender = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $damageDealtToEpicMonsters = null;
+
+    /**
+     * @ORM\Column(name="game_ended_in_ignb_surrender", type="boolean", nullable=true)
+     */
+    private $gameEndedInIGNBSurrender = null;
+
+    /**
+     * @ORM\Column(type="json", nullable=true)
+     */
+    private $missions = [];
+
+    /**
+     * @ORM\Column(name="player_behavior", type="json", nullable=true)
+     */
+    private $playerBehavior = [];
+
+    /**
+     * @ORM\Column(name="player_score0", type="float", nullable=true)
+     */
+    private $playerScore0 = null;
+
+    /**
+     * @ORM\Column(name="player_score1", type="float", nullable=true)
+     */
+    private $playerScore1 = null;
+
+    /**
+     * @ORM\Column(name="player_score2", type="float", nullable=true)
+     */
+    private $playerScore2 = null;
+
+    /**
+     * @ORM\Column(name="player_score3", type="float", nullable=true)
+     */
+    private $playerScore3 = null;
+
+    /**
+     * @ORM\Column(name="player_score4", type="float", nullable=true)
+     */
+    private $playerScore4 = null;
+
+    /**
+     * @ORM\Column(name="player_score5", type="float", nullable=true)
+     */
+    private $playerScore5 = null;
+
+    /**
+     * @ORM\Column(name="player_score6", type="float", nullable=true)
+     */
+    private $playerScore6 = null;
+
+    /**
+     * @ORM\Column(name="player_score7", type="float", nullable=true)
+     */
+    private $playerScore7 = null;
+
+    /**
+     * @ORM\Column(name="player_score8", type="float", nullable=true)
+     */
+    private $playerScore8 = null;
+
+    /**
+     * @ORM\Column(name="player_score9", type="float", nullable=true)
+     */
+    private $playerScore9 = null;
+
+    /**
+     * @ORM\Column(name="player_score10", type="float", nullable=true)
+     */
+    private $playerScore10 = null;
+
+    /**
+     * @ORM\Column(name="player_score11", type="float", nullable=true)
+     */
+    private $playerScore11 = null;
+
+    /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $positionAssignedByMatchmaking = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $retreatPings = null;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $roleBoundItem = null;
+
+    /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $selectedRolePreferences = null;
+
+    /**
+     * @ORM\Column(name="team_ignb_surrendered", type="boolean", nullable=true)
+     */
+    private $teamIGNBSurrendered = null;
+
+    /**
+     * @ORM\Column(name="was_premade_with_ignb_game_end_causer", type="boolean", nullable=true)
+     */
+    private $wasPremadeWithIGNBGameEndCauser = null;
+
+    /**
+     * @ORM\Column(type="boolean", nullable=true)
+     */
+    private $wasPremadeWithSevereTransgressor = null;
+
+    /**
+     * @ORM\Column(type="boolean", nullable=true)
+     */
+    private $wasSevereTransgressor = null;
+
     private $score = 0;
 
     private $individualBest = [];
 
     private $comments = [];
+
+    private $teamRelation = null;
+
+    private $activePlayerWin = null;
 
     public function getComments(): array
     {
@@ -2855,5 +2986,277 @@ class Participant
     public function setSubteamPlacement($subteamPlacement): void
     {
         $this->subteamPlacement = $subteamPlacement;
+    }
+
+    // Riot Match API field accessors added after parser audit.
+
+    public function getCausedGameEndFromIGNBSurrender()
+    {
+        return $this->causedGameEndFromIGNBSurrender;
+    }
+
+    public function setCausedGameEndFromIGNBSurrender($causedGameEndFromIGNBSurrender): void
+    {
+        $this->causedGameEndFromIGNBSurrender = $causedGameEndFromIGNBSurrender;
+    }
+
+    public function getDamageDealtToEpicMonsters()
+    {
+        return $this->damageDealtToEpicMonsters;
+    }
+
+    public function setDamageDealtToEpicMonsters($damageDealtToEpicMonsters): void
+    {
+        $this->damageDealtToEpicMonsters = $damageDealtToEpicMonsters;
+    }
+
+    public function getGameEndedInIGNBSurrender()
+    {
+        return $this->gameEndedInIGNBSurrender;
+    }
+
+    public function setGameEndedInIGNBSurrender($gameEndedInIGNBSurrender): void
+    {
+        $this->gameEndedInIGNBSurrender = $gameEndedInIGNBSurrender;
+    }
+
+    public function getMissions()
+    {
+        return $this->missions;
+    }
+
+    public function setMissions($missions): void
+    {
+        $this->missions = $missions;
+    }
+
+    public function getPlayerBehavior()
+    {
+        return $this->playerBehavior;
+    }
+
+    public function setPlayerBehavior($playerBehavior): void
+    {
+        $this->playerBehavior = $playerBehavior;
+    }
+
+    public function getPlayerScore0()
+    {
+        return $this->playerScore0;
+    }
+
+    public function setPlayerScore0($playerScore0): void
+    {
+        $this->playerScore0 = $playerScore0;
+    }
+
+    public function getPlayerScore1()
+    {
+        return $this->playerScore1;
+    }
+
+    public function setPlayerScore1($playerScore1): void
+    {
+        $this->playerScore1 = $playerScore1;
+    }
+
+    public function getPlayerScore2()
+    {
+        return $this->playerScore2;
+    }
+
+    public function setPlayerScore2($playerScore2): void
+    {
+        $this->playerScore2 = $playerScore2;
+    }
+
+    public function getPlayerScore3()
+    {
+        return $this->playerScore3;
+    }
+
+    public function setPlayerScore3($playerScore3): void
+    {
+        $this->playerScore3 = $playerScore3;
+    }
+
+    public function getPlayerScore4()
+    {
+        return $this->playerScore4;
+    }
+
+    public function setPlayerScore4($playerScore4): void
+    {
+        $this->playerScore4 = $playerScore4;
+    }
+
+    public function getPlayerScore5()
+    {
+        return $this->playerScore5;
+    }
+
+    public function setPlayerScore5($playerScore5): void
+    {
+        $this->playerScore5 = $playerScore5;
+    }
+
+    public function getPlayerScore6()
+    {
+        return $this->playerScore6;
+    }
+
+    public function setPlayerScore6($playerScore6): void
+    {
+        $this->playerScore6 = $playerScore6;
+    }
+
+    public function getPlayerScore7()
+    {
+        return $this->playerScore7;
+    }
+
+    public function setPlayerScore7($playerScore7): void
+    {
+        $this->playerScore7 = $playerScore7;
+    }
+
+    public function getPlayerScore8()
+    {
+        return $this->playerScore8;
+    }
+
+    public function setPlayerScore8($playerScore8): void
+    {
+        $this->playerScore8 = $playerScore8;
+    }
+
+    public function getPlayerScore9()
+    {
+        return $this->playerScore9;
+    }
+
+    public function setPlayerScore9($playerScore9): void
+    {
+        $this->playerScore9 = $playerScore9;
+    }
+
+    public function getPlayerScore10()
+    {
+        return $this->playerScore10;
+    }
+
+    public function setPlayerScore10($playerScore10): void
+    {
+        $this->playerScore10 = $playerScore10;
+    }
+
+    public function getPlayerScore11()
+    {
+        return $this->playerScore11;
+    }
+
+    public function setPlayerScore11($playerScore11): void
+    {
+        $this->playerScore11 = $playerScore11;
+    }
+
+    public function getPositionAssignedByMatchmaking()
+    {
+        return $this->positionAssignedByMatchmaking;
+    }
+
+    public function setPositionAssignedByMatchmaking($positionAssignedByMatchmaking): void
+    {
+        $this->positionAssignedByMatchmaking = $positionAssignedByMatchmaking;
+    }
+
+    public function getRetreatPings()
+    {
+        return $this->retreatPings;
+    }
+
+    public function setRetreatPings($retreatPings): void
+    {
+        $this->retreatPings = $retreatPings;
+    }
+
+    public function getRoleBoundItem()
+    {
+        return $this->roleBoundItem;
+    }
+
+    public function setRoleBoundItem($roleBoundItem): void
+    {
+        $this->roleBoundItem = $roleBoundItem;
+    }
+
+    public function getSelectedRolePreferences()
+    {
+        return $this->selectedRolePreferences;
+    }
+
+    public function setSelectedRolePreferences($selectedRolePreferences): void
+    {
+        $this->selectedRolePreferences = $selectedRolePreferences;
+    }
+
+    public function getTeamIGNBSurrendered()
+    {
+        return $this->teamIGNBSurrendered;
+    }
+
+    public function setTeamIGNBSurrendered($teamIGNBSurrendered): void
+    {
+        $this->teamIGNBSurrendered = $teamIGNBSurrendered;
+    }
+
+    public function getWasPremadeWithIGNBGameEndCauser()
+    {
+        return $this->wasPremadeWithIGNBGameEndCauser;
+    }
+
+    public function setWasPremadeWithIGNBGameEndCauser($wasPremadeWithIGNBGameEndCauser): void
+    {
+        $this->wasPremadeWithIGNBGameEndCauser = $wasPremadeWithIGNBGameEndCauser;
+    }
+
+    public function getWasPremadeWithSevereTransgressor()
+    {
+        return $this->wasPremadeWithSevereTransgressor;
+    }
+
+    public function setWasPremadeWithSevereTransgressor($wasPremadeWithSevereTransgressor): void
+    {
+        $this->wasPremadeWithSevereTransgressor = $wasPremadeWithSevereTransgressor;
+    }
+
+    public function getWasSevereTransgressor()
+    {
+        return $this->wasSevereTransgressor;
+    }
+
+    public function setWasSevereTransgressor($wasSevereTransgressor): void
+    {
+        $this->wasSevereTransgressor = $wasSevereTransgressor;
+    }
+
+    public function getTeamRelation(): ?string
+    {
+        return $this->teamRelation;
+    }
+
+    public function setTeamRelation(?string $teamRelation): void
+    {
+        $this->teamRelation = $teamRelation;
+    }
+
+    public function getActivePlayerWin(): ?bool
+    {
+        return $this->activePlayerWin;
+    }
+
+    public function setActivePlayerWin(?bool $activePlayerWin): void
+    {
+        $this->activePlayerWin = $activePlayerWin;
     }
 }
