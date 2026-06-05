@@ -10,6 +10,21 @@ use Doctrine\Persistence\ManagerRegistry;
 
 class GameRepository extends ServiceEntityRepository
 {
+    private const PLAYER_FILTER_OPERATORS = ['=', '>', '<', '>=', '<=', 'contains'];
+    private const BLOCKED_PLAYER_FILTER_FIELDS = [
+        'id',
+        'info',
+        'challenge',
+        'perks',
+        'missions',
+        'playerBehavior',
+        'score',
+        'individualBest',
+        'comments',
+        'teamRelation',
+        'activePlayerWin',
+    ];
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Game::class);
@@ -151,14 +166,22 @@ class GameRepository extends ServiceEntityRepository
             }
         }
 
-        foreach($filters['activePlayer'] as $activePlayerFilterName => $filterData) {
-            $qb->andWhere('participantWithPuuid.' . $activePlayerFilterName . ' = :' . 'activePlayer'. $activePlayerFilterName)
-                ->setParameter('activePlayer'.$activePlayerFilterName, $filterData);
+        if (isset($filters['activePlayer']) && is_array($filters['activePlayer'])) {
+            foreach($filters['activePlayer'] as $activePlayerFilterName => $filterData) {
+                $qb->andWhere('participantWithPuuid.' . $activePlayerFilterName . ' = :' . 'activePlayer'. $activePlayerFilterName)
+                    ->setParameter('activePlayer'.$activePlayerFilterName, $filterData);
+            }
         }
 
-        foreach ($filters['metadata'] as $metadataFilterName => $filterData) {
-            $qb->andWhere('m.' . $metadataFilterName . ' LIKE :' . $metadataFilterName)
-                ->setParameter($metadataFilterName, '%' . $filterData . '%');
+        if (isset($filters['playerRules']) && is_array($filters['playerRules'])) {
+            $this->applyPlayerRuleFilters($qb, $filters['playerRules']);
+        }
+
+        if (isset($filters['metadata']) && is_array($filters['metadata'])) {
+            foreach ($filters['metadata'] as $metadataFilterName => $filterData) {
+                $qb->andWhere('m.' . $metadataFilterName . ' LIKE :' . $metadataFilterName)
+                    ->setParameter($metadataFilterName, '%' . $filterData . '%');
+            }
         }
 
         if (isset($filters['info'])) {
@@ -174,6 +197,11 @@ class GameRepository extends ServiceEntityRepository
                 $qb->andWhere('i.queueId IN (:rankedQueueIds)')
                     ->setParameter('rankedQueueIds', [420, 440]);
             }
+        }
+
+        if (isset($filters['advanced']['placement'])) {
+            $qb->andWhere('participantWithPuuid.placement = :advancedPlacement')
+                ->setParameter('advancedPlacement', (int) $filters['advanced']['placement']);
         }
 
         $ids = [];
@@ -197,6 +225,188 @@ class GameRepository extends ServiceEntityRepository
 
         return $minimizedGames;
 
+    }
+
+    private function applyPlayerRuleFilters($qb, array $rules): void
+    {
+        foreach (array_values($rules) as $index => $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $alias = 'playerRule' . $index;
+            $player = $rule['player'] ?? [];
+            $isCurrentPlayer = isset($player['type']) && $player['type'] === 'me';
+
+            if ($isCurrentPlayer) {
+                $alias = 'participantWithPuuid';
+            } else {
+                $qb->innerJoin('i.participants', $alias);
+                $identityConditions = $qb->expr()->orX();
+                $hasIdentityCondition = false;
+
+                if (!empty($player['puuid'])) {
+                    $identityConditions->add($alias . '.puuid = :' . $alias . 'Puuid');
+                    $qb->setParameter($alias . 'Puuid', $player['puuid']);
+                    $hasIdentityCondition = true;
+                }
+
+                if (!empty($player['gameName'])) {
+                    $identityConditions->add($alias . '.riotIdGameName LIKE :' . $alias . 'GameName');
+                    $identityConditions->add($alias . '.summonerName LIKE :' . $alias . 'GameName');
+                    $qb->setParameter($alias . 'GameName', '%' . $player['gameName'] . '%');
+                    $hasIdentityCondition = true;
+                }
+
+                if (!$hasIdentityCondition) {
+                    continue;
+                }
+
+                $qb->andWhere($identityConditions);
+                $teamRelation = $rule['teamRelation'] ?? null;
+                if ($teamRelation === 'ally') {
+                    $qb->andWhere($alias . '.teamId = participantWithPuuid.teamId');
+                }
+                if ($teamRelation === 'enemy') {
+                    $qb->andWhere($alias . '.teamId != participantWithPuuid.teamId');
+                }
+            }
+
+            if (!empty($rule['individualPosition'])) {
+                $qb->andWhere($alias . '.individualPosition = :' . $alias . 'Position')
+                    ->setParameter($alias . 'Position', $rule['individualPosition']);
+            }
+
+            if (!empty($rule['championId'])) {
+                $qb->andWhere($alias . '.championId = :' . $alias . 'ChampionId')
+                    ->setParameter($alias . 'ChampionId', (int) $rule['championId']);
+            }
+
+            $conditions = $this->normalizePlayerRuleConditions($rule);
+            if ($conditions !== []) {
+                $this->applyPlayerFieldConditions($qb, $alias, $conditions, $rule['conditionMode'] ?? 'and', $index);
+            }
+        }
+    }
+
+    private function normalizePlayerRuleConditions(array $rule): array
+    {
+        $conditions = [];
+
+        if (isset($rule['conditions']) && is_array($rule['conditions'])) {
+            $conditions = $rule['conditions'];
+        } elseif (!empty($rule['field']) && isset($rule['value'])) {
+            $conditions = [[
+                'field' => $rule['field'],
+                'operator' => $rule['operator'] ?? '=',
+                'value' => $rule['value'],
+            ]];
+        }
+
+        return array_values(array_filter($conditions, static function ($condition) {
+            return is_array($condition)
+                && !empty($condition['field'])
+                && isset($condition['value'])
+                && $condition['value'] !== '';
+        }));
+    }
+
+    private function applyPlayerFieldConditions($qb, string $alias, array $conditions, string $conditionMode, int $ruleIndex): void
+    {
+        $conditionExpression = strtolower($conditionMode) === 'or'
+            ? $qb->expr()->orX()
+            : $qb->expr()->andX();
+        $hasConditionExpression = false;
+
+        foreach ($conditions as $conditionIndex => $condition) {
+            $expression = $this->buildPlayerFieldCondition($qb, $alias, $condition, $ruleIndex, $conditionIndex);
+            if ($expression !== null) {
+                $conditionExpression->add($expression);
+                $hasConditionExpression = true;
+            }
+        }
+
+        if ($hasConditionExpression) {
+            $qb->andWhere($conditionExpression);
+        }
+    }
+
+    private function buildPlayerFieldCondition($qb, string $alias, array $condition, int $ruleIndex, int $conditionIndex): ?string
+    {
+        $field = $condition['field'];
+        $operator = $condition['operator'] ?? '=';
+
+        if (!$this->isAllowedPlayerFilterField($field) || !in_array($operator, self::PLAYER_FILTER_OPERATORS, true)) {
+            return null;
+        }
+
+        $fieldType = $this->getPlayerFilterFieldType($field);
+        if (!$this->isOperatorAllowedForFieldType($operator, $fieldType)) {
+            return null;
+        }
+
+        $parameterName = 'playerRule' . $ruleIndex . 'Condition' . $conditionIndex . ucfirst($field);
+        if ($operator === 'contains') {
+            $qb->setParameter($parameterName, '%' . $condition['value'] . '%');
+            return $alias . '.' . $field . ' LIKE :' . $parameterName;
+        }
+
+        $qb->setParameter($parameterName, $this->normalizePlayerFieldValue($condition['value'], $fieldType));
+        return $alias . '.' . $field . ' ' . $operator . ' :' . $parameterName;
+    }
+
+    private function isAllowedPlayerFilterField(string $field): bool
+    {
+        if (!preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $field)) {
+            return false;
+        }
+
+        if (in_array($field, self::BLOCKED_PLAYER_FILTER_FIELDS, true)) {
+            return false;
+        }
+
+        return $this->getEntityManager()->getClassMetadata(Participant::class)->hasField($field);
+    }
+
+    private function getPlayerFilterFieldType(string $field): ?string
+    {
+        $metadata = $this->getEntityManager()->getClassMetadata(Participant::class);
+
+        return $metadata->hasField($field) ? $metadata->getTypeOfField($field) : null;
+    }
+
+    private function isOperatorAllowedForFieldType(string $operator, ?string $fieldType): bool
+    {
+        if (in_array($fieldType, ['integer', 'float'], true)) {
+            return in_array($operator, ['=', '>', '<', '>=', '<='], true);
+        }
+
+        if ($fieldType === 'boolean') {
+            return $operator === '=';
+        }
+
+        if (in_array($fieldType, ['string', 'text'], true)) {
+            return in_array($operator, ['=', 'contains'], true);
+        }
+
+        return false;
+    }
+
+    private function normalizePlayerFieldValue($value, ?string $fieldType)
+    {
+        if ($fieldType === 'boolean' && is_string($value)) {
+            return strtolower($value) === 'true' || $value === '1';
+        }
+
+        if ($fieldType === 'integer') {
+            return (int) $value;
+        }
+
+        if ($fieldType === 'float') {
+            return (float) $value;
+        }
+
+        return $value;
     }
 
     private function applyTeamPlayerFilters($qb, array $players, string $aliasPrefix, ?string $teamExpression = null, bool $enemyTeam = false): void
