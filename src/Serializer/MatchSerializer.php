@@ -232,6 +232,34 @@ final class MatchSerializer
     /**
      * Jedna ścieżka run (primary albo secondary)
      *
+     * @param array|null $perks
+     * @return string[]
+     */
+    public static function extractMainRuneIcons(?array $perks, ?string $ddragonVersion = null): array
+    {
+        if ($perks === null) {
+            return [];
+        }
+
+        $ddragonVersion ??= self::getLatestDdragonVersion();
+        $perkIdToIconPath = self::getPerkIdToIconPathMap($ddragonVersion);
+        $styles = $perks['styles'] ?? [];
+        $icons = [];
+
+        $primaryKeystoneId = $styles[0]['selections'][0]['perk'] ?? null;
+        if ($primaryKeystoneId !== null && isset($perkIdToIconPath[(int) $primaryKeystoneId])) {
+            $icons[] = sprintf(self::DDDRAGON_PERK_ICON, $perkIdToIconPath[(int) $primaryKeystoneId]);
+        }
+
+        $secondaryStyleId = $styles[1]['style'] ?? null;
+        if ($secondaryStyleId !== null && isset($perkIdToIconPath[(int) $secondaryStyleId])) {
+            $icons[] = sprintf(self::DDDRAGON_PERK_ICON, $perkIdToIconPath[(int) $secondaryStyleId]);
+        }
+
+        return $icons;
+    }
+
+    /**
      * @param array $style
      * @param array<int,string> $perkIdToIconPath
      * @return string[]

@@ -17,6 +17,7 @@ use App\Repository\ClipRepository;
 use App\Repository\GameRepository;
 use App\Repository\ParticipantRepository;
 use App\Repository\StatsRepository;
+use App\Serializer\MatchSerializer;
 use App\Utils\GameBackfiller;
 use App\Utils\RegionMatcher;
 use Doctrine\ORM\EntityManagerInterface;
@@ -343,6 +344,10 @@ class GameController extends AbstractController
                         'gold_earned' => $participant->getGoldEarned(),
                         'total_minions_killed' => $participant->getTotalMinionsKilled(),
                         'champion_name' => $participant->getChampionName(),
+                        'individual_position' => $participant->getIndividualPosition(),
+                        'team_position' => $participant->getTeamPosition(),
+                        'role' => $participant->getRole(),
+                        'runes' => MatchSerializer::extractMainRuneIcons($participant->getPerks()),
                     ]],
                 ],
             ];

@@ -173,6 +173,10 @@ class GameRepository extends ServiceEntityRepository
             }
         }
 
+        if (isset($filters['easyFilters']) && is_array($filters['easyFilters'])) {
+            $this->applyActivePlayerEasyFilters($qb, $filters['easyFilters'], $puuid);
+        }
+
         if (isset($filters['playerRules']) && is_array($filters['playerRules'])) {
             $this->applyPlayerRuleFilters($qb, $filters['playerRules']);
         }
@@ -227,6 +231,60 @@ class GameRepository extends ServiceEntityRepository
 
     }
 
+    private function applyActivePlayerEasyFilters($qb, array $filters, string $puuid): void
+    {
+        if (!empty($filters['individualPosition'])) {
+            $qb->andWhere('participantWithPuuid.individualPosition = :easyIndividualPosition')
+                ->setParameter('easyIndividualPosition', $filters['individualPosition']);
+        }
+
+        if (!empty($filters['championId'])) {
+            $qb->andWhere('participantWithPuuid.championId = :easyChampionId')
+                ->setParameter('easyChampionId', (int) $filters['championId']);
+        }
+
+        if (!empty($filters['itemId'])) {
+            $itemExpression = $qb->expr()->orX();
+            for ($slot = 0; $slot <= 6; $slot++) {
+                $itemExpression->add('participantWithPuuid.item' . $slot . ' = :easyItemId');
+            }
+            $qb->andWhere($itemExpression)
+                ->setParameter('easyItemId', (int) $filters['itemId']);
+        }
+
+        if (!empty($filters['runeId'])) {
+            $gameIds = $this->findGameIdsByActivePlayerRune($puuid, (int) $filters['runeId']);
+            if ($gameIds === []) {
+                $qb->andWhere('g.id = -1');
+                return;
+            }
+
+            $qb->andWhere('g.id IN (:easyRuneGameIds)')
+                ->setParameter('easyRuneGameIds', $gameIds);
+        }
+    }
+
+    private function findGameIdsByActivePlayerRune(string $puuid, int $runeId): array
+    {
+        if ($runeId <= 0) {
+            return [];
+        }
+
+        return $this->getEntityManager()->getConnection()->fetchFirstColumn(
+            'SELECT g.id
+             FROM game g
+             INNER JOIN info i ON g.info_id = i.id
+             INNER JOIN participant p ON p.info_id = i.id
+             WHERE p.puuid = :puuid
+               AND (p.perks::text LIKE :compactRune OR p.perks::text LIKE :spacedRune)',
+            [
+                'puuid' => $puuid,
+                'compactRune' => '%"perk":' . $runeId . '%',
+                'spacedRune' => '%"perk": ' . $runeId . '%',
+            ]
+        );
+    }
+
     private function applyPlayerRuleFilters($qb, array $rules): void
     {
         foreach (array_values($rules) as $index => $rule) {
@@ -237,9 +295,12 @@ class GameRepository extends ServiceEntityRepository
             $alias = 'playerRule' . $index;
             $player = $rule['player'] ?? [];
             $isCurrentPlayer = isset($player['type']) && $player['type'] === 'me';
+            $isAnyPlayer = isset($player['type']) && $player['type'] === 'any';
 
             if ($isCurrentPlayer) {
                 $alias = 'participantWithPuuid';
+            } elseif ($isAnyPlayer) {
+                $qb->innerJoin('i.participants', $alias);
             } else {
                 $qb->innerJoin('i.participants', $alias);
                 $identityConditions = $qb->expr()->orX();
