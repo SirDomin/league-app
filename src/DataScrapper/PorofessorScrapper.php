@@ -42,16 +42,15 @@ class PorofessorScrapper
         $members = $crawler->filter('.card-5')->each(function (Crawler $node) {
             $body = $this->firstNode($node, '.cardBody') ?? $node;
             $championBox = $this->firstNode($body, '.championBox') ?? $body;
-            $tagsArray = $body->filter('.tags-box .tag')->each(function (Crawler $tag) {
-                return trim($tag->text(''));
-            });
+            $tagDetails = $this->extractTags($body);
 
             return [
                 'premade' => $this->firstText($node, '.premadeHistoryTagContainer'),
                 'nickname' => $this->getNickname($node),
                 'wr' => $this->firstText($championBox, '.txt .title'),
                 'rank' => $this->firstText($championBox, '.rankingExternalLink'),
-                'tags' => array_values(array_filter($tagsArray)),
+                'tags' => array_map(static fn(array $tag): string => $tag['label'], $tagDetails),
+                'tag_details' => $tagDetails,
                 'source' => 'porofessor',
                 'summoner_id' => $node->attr('data-summonerid'),
                 'team' => $this->getTeam($node),
@@ -192,6 +191,64 @@ class PorofessorScrapper
         $value = str_replace(',', '.', trim($value));
 
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function extractTags(Crawler $body): array
+    {
+        $tags = $body->filter('.tags-box div.tag')->each(function (Crawler $tag): ?array {
+            $label = $this->normalizeText($tag->text(''));
+            $tooltip = (string) $tag->attr('tooltip');
+
+            if ($label === '') {
+                $label = $this->extractTooltipTitle($tooltip);
+            }
+
+            if ($label === '') {
+                return null;
+            }
+
+            return [
+                'label' => $label,
+                'description' => $this->extractTooltipDescription($tooltip),
+                'type' => $this->extractTagType((string) $tag->attr('class')),
+            ];
+        });
+
+        return array_values(array_filter($tags));
+    }
+
+    private function extractTooltipTitle(string $tooltip): string
+    {
+        if (preg_match('/<itemname[^>]*>(.*?)<\/itemname>/is', $tooltip, $matches) === 1) {
+            return $this->normalizeText(strip_tags(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5)));
+        }
+
+        return '';
+    }
+
+    private function extractTooltipDescription(string $tooltip): string
+    {
+        if (preg_match('/<span[^>]*class=[\'"]tagDescription[\'"][^>]*>(.*?)<\/span>/is', $tooltip, $matches) === 1) {
+            return $this->normalizeText(strip_tags(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5)));
+        }
+
+        return '';
+    }
+
+    private function extractTagType(string $class): ?string
+    {
+        foreach (['green', 'yellow', 'orange', 'red', 'blue', 'purple'] as $type) {
+            if (preg_match('/(^|\s)' . preg_quote($type, '/') . '(\s|$)/', $class) === 1) {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeText(string $value): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
     }
 
     private function firstNode(Crawler $node, string $selector): ?Crawler
