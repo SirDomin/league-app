@@ -38,11 +38,17 @@ class PorofessorScrapper
 
         $crawler = new Crawler();
         $crawler->addHtmlContent($responseBody);
+        $tagsBySummonerId = $this->extractTagsBySummonerId($responseBody);
 
-        $members = $crawler->filter('.card-5')->each(function (Crawler $node) {
+        $members = $crawler->filter('.card-5')->each(function (Crawler $node) use ($tagsBySummonerId) {
             $body = $this->firstNode($node, '.cardBody') ?? $node;
             $championBox = $this->firstNode($body, '.championBox') ?? $body;
-            $tagDetails = $this->extractTags($body);
+            $summonerId = (string) $node->attr('data-summonerid');
+            $tagDetails = $tagsBySummonerId[$summonerId] ?? [];
+
+            if ($tagDetails === []) {
+                $tagDetails = $this->extractTags($body);
+            }
 
             return [
                 'premade' => $this->firstText($node, '.premadeHistoryTagContainer'),
@@ -52,7 +58,7 @@ class PorofessorScrapper
                 'tags' => array_map(static fn(array $tag): string => $tag['label'], $tagDetails),
                 'tag_details' => $tagDetails,
                 'source' => 'porofessor',
-                'summoner_id' => $node->attr('data-summonerid'),
+                'summoner_id' => $summonerId !== '' ? $summonerId : null,
                 'team' => $this->getTeam($node),
                 'profile_url' => $this->firstAttr($node, '.cardHeader a', 'href'),
                 'champion' => $this->firstAttr($championBox, '.imgColumn-champion img', 'alt'),
@@ -223,17 +229,44 @@ class PorofessorScrapper
         return $this->extractTagsFromHtml($this->crawlerHtml($body));
     }
 
+    private function extractTagsBySummonerId(string $html): array
+    {
+        preg_match_all(
+            '/<div\s+class="card\s+card-5"[^>]*data-summonerid="([^"]+)"[^>]*>(.*?)(?=<li>\s*<div\s+class="card\s+card-5"|\z)/is',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        );
+
+        $tagsBySummonerId = [];
+
+        foreach ($matches as $match) {
+            $summonerId = trim($match[1]);
+
+            if ($summonerId === '') {
+                continue;
+            }
+
+            $tagsBySummonerId[$summonerId] = $this->extractTagsFromHtml($match[2]);
+        }
+
+        return $tagsBySummonerId;
+    }
+
     private function extractTagsFromHtml(string $html): array
     {
         if ($html === '') {
             return [];
         }
 
-        if (preg_match('/<div\s+class="box\s+tags-box[^"]*"[^>]*>(.*?)<\/div>\s*(?:<\/div>\s*<\/div>\s*<\/li>|<li|\z)/is', $html, $tagsBoxMatch) !== 1) {
+        $tagsBoxPosition = stripos($html, 'tags-box');
+
+        if ($tagsBoxPosition === false) {
             return [];
         }
 
-        preg_match_all('/<div\s+class="([^"]*\btag\b[^"]*)"[^>]*\btooltip="([^"]*)"[^>]*>(.*?)<\/div>/is', $tagsBoxMatch[1], $matches, PREG_SET_ORDER);
+        $tagsHtml = substr($html, $tagsBoxPosition);
+        preg_match_all('/<div\s+class="([^"]*\btag\b[^"]*)"[^>]*\btooltip="([^"]*)"[^>]*>(.*?)<\/div>/is', $tagsHtml, $matches, PREG_SET_ORDER);
 
         $tags = [];
 
