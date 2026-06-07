@@ -214,7 +214,59 @@ class PorofessorScrapper
             ];
         });
 
-        return array_values(array_filter($tags));
+        $tags = array_values(array_filter($tags));
+
+        if ($tags !== []) {
+            return $tags;
+        }
+
+        return $this->extractTagsFromHtml($this->crawlerHtml($body));
+    }
+
+    private function extractTagsFromHtml(string $html): array
+    {
+        if ($html === '') {
+            return [];
+        }
+
+        if (preg_match('/<div\s+class="box\s+tags-box[^"]*"[^>]*>(.*?)<\/div>\s*(?:<\/div>\s*<\/div>\s*<\/li>|<li|\z)/is', $html, $tagsBoxMatch) !== 1) {
+            return [];
+        }
+
+        preg_match_all('/<div\s+class="([^"]*\btag\b[^"]*)"[^>]*\btooltip="([^"]*)"[^>]*>(.*?)<\/div>/is', $tagsBoxMatch[1], $matches, PREG_SET_ORDER);
+
+        $tags = [];
+
+        foreach ($matches as $match) {
+            $class = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5);
+            $tooltip = html_entity_decode($match[2], ENT_QUOTES | ENT_HTML5);
+            $label = $this->normalizeText(strip_tags(html_entity_decode($match[3], ENT_QUOTES | ENT_HTML5)));
+
+            if ($label === '') {
+                $label = $this->extractTooltipTitle($tooltip);
+            }
+
+            if ($label === '') {
+                continue;
+            }
+
+            $tags[] = [
+                'label' => $label,
+                'description' => $this->extractTooltipDescription($tooltip),
+                'type' => $this->extractTagType($class),
+            ];
+        }
+
+        return $tags;
+    }
+
+    private function crawlerHtml(Crawler $node): string
+    {
+        try {
+            return $node->html('');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     private function extractTooltipTitle(string $tooltip): string
