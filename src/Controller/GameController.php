@@ -454,9 +454,36 @@ class GameController extends AbstractController
     #[Route('/test', name: 'test')]
     public function test(Request $request): Response
     {
-        $serializer = SerializerBuilder::create()->build();
+        $summoner = (string) $request->query->get('summoner', 'SirDomin-Domin');
+        $region = (string) $request->query->get('region', 'eune');
 
-        return new Response($serializer->serialize(['filters' => 'test'], 'json'));
+        try {
+            $data = $this->porofessorScrapper->getActiveData($summoner, $region);
+        } catch (\Throwable $exception) {
+            return new JsonResponse([
+                'provider' => 'porofessor',
+                'summoner' => $summoner,
+                'region' => $region,
+                'status' => 'error',
+                'players' => 0,
+                'error' => $exception->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        $status = match (true) {
+            $data === null => 'not_in_game',
+            $data === [] => 'unavailable',
+            default => 'available',
+        };
+
+        return new JsonResponse([
+            'provider' => 'porofessor',
+            'summoner' => $summoner,
+            'region' => $region,
+            'status' => $status,
+            'players' => is_array($data) ? count($data) : 0,
+            'data' => $data,
+        ]);
     }
 
     #[Route('/test2', name: 'test2')]
