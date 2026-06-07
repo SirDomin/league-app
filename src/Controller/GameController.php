@@ -320,13 +320,19 @@ class GameController extends AbstractController
                 ],
                 'info' => [
                     'game_creation' => $game->getInfo()->getGameCreation(),
+                    'game_start_timestamp' => $game->getInfo()->getGameStartTimestamp(),
+                    'game_end_timestamp' => $game->getInfo()->getGameEndTimestamp(),
                     'queue_id' => $game->getInfo()->getQueueId(),
                     'game_duration' => $game->getInfo()->getGameDuration(),
+                    'end_of_game_result' => $game->getInfo()->getEndOfGameResult(),
+                    'is_remake' => $this->isRemake($game, $participant),
                     /** Participant $participant */
                     'participants' => [[
                         'puuid' => $participant->getPuuid(),
                         'id' => $participant->getId(),
                         'win' => $participant->getWin(),
+                        'game_ended_in_early_surrender' => $participant->getGameEndedInEarlySurrender(),
+                        'game_ended_in_surrender' => $participant->getGameEndedInSurrender(),
                         'placement' => $participant->getPlacement(),
                         'summoner1_id' => $participant->getSummoner1Id(),
                         'summoner2_id' => $participant->getSummoner2Id(),
@@ -358,6 +364,19 @@ class GameController extends AbstractController
         });
 
         return new Response($serializer->serialize(['games' => $filteredGames], 'json'));
+    }
+
+    private function isRemake(Game $game, Participant $participant): bool
+    {
+        $duration = (int) $game->getInfo()->getGameDuration();
+        $endOfGameResult = strtolower((string) $game->getInfo()->getEndOfGameResult());
+
+        if (str_contains($endOfGameResult, 'remake')) {
+            return true;
+        }
+
+        return $participant->getGameEndedInEarlySurrender() === true
+            || ($duration > 0 && $duration <= 300);
     }
 
     #[Route('/game/history/filters', name: 'game-get-history-filters', methods: ['GET'])]
