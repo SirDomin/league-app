@@ -227,13 +227,13 @@ class SummonerController extends AbstractController
             );
         }
 
-        return new Response($serializer->serialize([
+        return new JsonResponse([
             'games' => $fullDataGames,
             'limit' => $limit,
             'start' => $start,
             'nextStart' => $start + count($fullDataGames),
             'hasMore' => $hasMore,
-        ], 'json'));
+        ]);
     }
 
     private function getParticipantByPuuid(Collection $participants, string $puuid): Participant
