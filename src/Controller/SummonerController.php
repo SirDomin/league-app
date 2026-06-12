@@ -185,6 +185,19 @@ class SummonerController extends AbstractController
         $start = max(0, $request->query->getInt('start', 0));
         $activePuuid = $this->getAuthenticatedPuuid($request);
 
+        if ($request->query->getBoolean('debugRequest')) {
+            return new JsonResponse([
+                'route' => [
+                    'summonerName' => $summonerName,
+                    'tag' => $tag,
+                ],
+                'query' => $request->query->all(),
+                'session' => $request->hasSession() ? $request->getSession()->all() : null,
+                'authorization_present' => $request->headers->has('Authorization'),
+                'authorization_preview' => $this->previewHeader($request->headers->get('Authorization')),
+            ]);
+        }
+
         $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
 
         $games = $this->gameRepository->getAllGamesWithPlayer($accountData['puuid'], $limit + 1, $start, $activePuuid);
@@ -293,5 +306,14 @@ class SummonerController extends AbstractController
         }
 
         return $targetParticipant->getTeamId() === $activeParticipant->getTeamId();
+    }
+
+    private function previewHeader(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return substr($value, 0, 20) . '...';
     }
 }
