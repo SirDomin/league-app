@@ -140,13 +140,16 @@ class SummonerController extends AbstractController
     }
 
     #[Route('/summoner/{summonerName}/{tag}/count', name: 'summoner-tag-count', methods: ['GET'])]
-    public function countWithNameAndTag(string $summonerName, string $tag): Response
+    public function countWithNameAndTag(string $summonerName, string $tag, Request $request): Response
     {
         $serializer = SerializerBuilder::create()->build();
 
         $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
+        $activePuuid = $this->getAuthenticatedPuuid($request);
 
-        return new Response($serializer->serialize(['games' => $this->gameRepository->countAllGamesWithPlayer($accountData['puuid'])], 'json'));
+        return new Response($serializer->serialize([
+            'games' => $this->gameRepository->countAllGamesWithPlayer($accountData['puuid'], $activePuuid)
+        ], 'json'));
     }
 
     #[Route('/summoner/{summonerName}/{tag}/analyze', name: 'summoner-analyze', methods: ['GET'])]
@@ -180,11 +183,11 @@ class SummonerController extends AbstractController
         $serializer = SerializerBuilder::create()->build();
         $limit = max(1, min(50, $request->query->getInt('limit', 20)));
         $start = max(0, $request->query->getInt('start', 0));
-        $activePuuid = $request->query->get('activePuuid');
+        $activePuuid = $this->getAuthenticatedPuuid($request);
 
         $accountData = $this->leagueApi->getAccountDataByRiotId($summonerName, $tag);
 
-        $games = $this->gameRepository->getAllGamesWithPlayer($accountData['puuid'], $limit + 1, $start);
+        $games = $this->gameRepository->getAllGamesWithPlayer($accountData['puuid'], $limit + 1, $start, $activePuuid);
         $hasMore = count($games) > $limit;
         $games = array_slice($games, 0, $limit);
 
@@ -195,20 +198,33 @@ class SummonerController extends AbstractController
 
             $participants = $fullGameData->getInfo()->getParticipants();
             $targetParticipant = $this->getParticipantByPuuid($participants, $accountData['puuid']);
+            $teamRelation = null;
+            $activePlayerWin = null;
 
             if ($activePuuid) {
-                $activeParticipant = $this->getParticipantByPuuid($participants, $activePuuid);
-                $targetParticipant->setTeamRelation($this->areParticipantsAllies($targetParticipant, $activeParticipant)
+                $activeParticipant = $this->findParticipantByPuuid($participants, $activePuuid);
+                if ($activeParticipant === null) {
+                    continue;
+                }
+
+                $teamRelation = $this->areParticipantsAllies($targetParticipant, $activeParticipant)
                     ? 'Ally'
-                    : 'Enemy');
-                $targetParticipant->setActivePlayerWin($activeParticipant->getWin());
+                    : 'Enemy';
+                $activePlayerWin = $activeParticipant->getWin();
+                $targetParticipant->setTeamRelation($teamRelation);
+                $targetParticipant->setActivePlayerWin($activePlayerWin);
             }
 
             $fullGameData->getInfo()->setParticipants([
                 $targetParticipant
             ]);
 
-            $fullDataGames[] = $fullGameData;
+            $fullDataGames[] = $this->serializeGameWithParticipantContext(
+                $serializer,
+                $fullGameData,
+                $teamRelation,
+                $activePlayerWin
+            );
         }
 
         return new Response($serializer->serialize([
@@ -222,13 +238,62 @@ class SummonerController extends AbstractController
 
     private function getParticipantByPuuid(Collection $participants, string $puuid): Participant
     {
+        $participant = $this->findParticipantByPuuid($participants, $puuid);
+        if ($participant !== null) {
+            return $participant;
+        }
+
+        throw new \Exception('user not found in game');
+    }
+
+    private function findParticipantByPuuid(Collection $participants, string $puuid): ?Participant
+    {
         foreach ($participants as $participant) {
             if ($participant->getPuuid() === $puuid) {
                 return $participant;
             }
         }
 
-        throw new \Exception('user not found in game');
+        return null;
+    }
+
+    private function getAuthenticatedPuuid(Request $request): ?string
+    {
+        $data = $request->getSession()->get('data');
+
+        return is_array($data) && !empty($data['puuid']) ? $data['puuid'] : null;
+    }
+
+    private function serializeGameWithParticipantContext(
+        $serializer,
+        Game $game,
+        ?string $teamRelation,
+        ?bool $activePlayerWin
+    ): array {
+        $serializedGame = json_decode($serializer->serialize($game, 'json'), true);
+        if (!is_array($serializedGame)) {
+            return [];
+        }
+
+        if (isset($serializedGame['info']['participants'][0])
+            && is_array($serializedGame['info']['participants'][0])
+        ) {
+            $participant = &$serializedGame['info']['participants'][0];
+            $participant['team_relation'] = $teamRelation;
+            $participant['teamRelation'] = $teamRelation;
+            $participant['active_player_win'] = $activePlayerWin;
+            $participant['activePlayerWin'] = $activePlayerWin;
+        }
+
+        $serializedGame['player_context'] = [
+            'team_relation' => $teamRelation,
+            'teamRelation' => $teamRelation,
+            'active_player_win' => $activePlayerWin,
+            'activePlayerWin' => $activePlayerWin,
+        ];
+        $serializedGame['playerContext'] = $serializedGame['player_context'];
+
+        return $serializedGame;
     }
 
     private function areParticipantsAllies(Participant $targetParticipant, Participant $activeParticipant): bool

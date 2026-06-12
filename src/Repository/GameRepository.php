@@ -585,7 +585,7 @@ class GameRepository extends ServiceEntityRepository
         return $this->getGames($ids);
     }
 
-    public function getAllGamesWithPlayer(string $puuid, int $limit = 0, int $start = 0): array
+    public function getAllGamesWithPlayer(string $puuid, int $limit = 0, int $start = 0, ?string $activePuuid = null): array
     {
         $query = $this
             ->createQueryBuilder('g')
@@ -601,6 +601,13 @@ class GameRepository extends ServiceEntityRepository
             ->setParameter('puuid', $puuid)
             ->addOrderBy('i.gameStartTimestamp', 'DESC')
         ;
+
+        if ($activePuuid !== null && $activePuuid !== '') {
+            $query
+                ->innerJoin('i.participants', 'activeParticipant', 'WITH', 'activeParticipant.puuid = :activePuuid')
+                ->setParameter('activePuuid', $activePuuid)
+            ;
+        }
 
         if ($start > 0) {
             $query->setFirstResult($start);
@@ -649,17 +656,25 @@ class GameRepository extends ServiceEntityRepository
         return count($result->getQuery()->getArrayResult());
     }
 
-    public function countAllGamesWithPlayer(string $puuid): int
+    public function countAllGamesWithPlayer(string $puuid, ?string $activePuuid = null): int
     {
-        return (int) $this
+        $query = $this
             ->createQueryBuilder('g')
             ->select('COUNT(DISTINCT g.id)')
             ->leftJoin('g.info', 'i')
             ->leftJoin('i.participants', 'participant')
             ->where('participant.puuid = :puuid')
             ->setParameter('puuid', $puuid)
-            ->getQuery()
-            ->getSingleScalarResult();
+        ;
+
+        if ($activePuuid !== null && $activePuuid !== '') {
+            $query
+                ->innerJoin('i.participants', 'activeParticipant', 'WITH', 'activeParticipant.puuid = :activePuuid')
+                ->setParameter('activePuuid', $activePuuid)
+            ;
+        }
+
+        return (int) $query->getQuery()->getSingleScalarResult();
     }
 
     public function getGameByInfoId(int $id): ?Game
