@@ -219,12 +219,31 @@ class SummonerController extends AbstractController
                 $targetParticipant
             ]);
 
-            $fullDataGames[] = $this->serializeGameWithParticipantContext(
-                $serializer,
-                $fullGameData,
-                $teamRelation,
-                $activePlayerWin
-            );
+            $serializedGame = json_decode($serializer->serialize($fullGameData, 'json'), true);
+            if (!is_array($serializedGame)) {
+                continue;
+            }
+
+            $playerContext = [
+                'team_relation' => $teamRelation,
+                'teamRelation' => $teamRelation,
+                'active_player_win' => $activePlayerWin,
+                'activePlayerWin' => $activePlayerWin,
+            ];
+
+            $serializedGame['player_context'] = $playerContext;
+            $serializedGame['playerContext'] = $playerContext;
+
+            if (isset($serializedGame['info']['participants'][0])
+                && is_array($serializedGame['info']['participants'][0])
+            ) {
+                $serializedGame['info']['participants'][0] = array_merge(
+                    $serializedGame['info']['participants'][0],
+                    $playerContext
+                );
+            }
+
+            $fullDataGames[] = $serializedGame;
         }
 
         return new JsonResponse([
@@ -262,38 +281,6 @@ class SummonerController extends AbstractController
         $data = $request->getSession()->get('data');
 
         return is_array($data) && !empty($data['puuid']) ? $data['puuid'] : null;
-    }
-
-    private function serializeGameWithParticipantContext(
-        $serializer,
-        Game $game,
-        ?string $teamRelation,
-        ?bool $activePlayerWin
-    ): array {
-        $serializedGame = json_decode($serializer->serialize($game, 'json'), true);
-        if (!is_array($serializedGame)) {
-            return [];
-        }
-
-        if (isset($serializedGame['info']['participants'][0])
-            && is_array($serializedGame['info']['participants'][0])
-        ) {
-            $participant = &$serializedGame['info']['participants'][0];
-            $participant['team_relation'] = $teamRelation;
-            $participant['teamRelation'] = $teamRelation;
-            $participant['active_player_win'] = $activePlayerWin;
-            $participant['activePlayerWin'] = $activePlayerWin;
-        }
-
-        $serializedGame['player_context'] = [
-            'team_relation' => $teamRelation,
-            'teamRelation' => $teamRelation,
-            'active_player_win' => $activePlayerWin,
-            'activePlayerWin' => $activePlayerWin,
-        ];
-        $serializedGame['playerContext'] = $serializedGame['player_context'];
-
-        return $serializedGame;
     }
 
     private function areParticipantsAllies(Participant $targetParticipant, Participant $activeParticipant): bool
